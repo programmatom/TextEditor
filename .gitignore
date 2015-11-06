@@ -1,0 +1,12 @@
+# application compilation intermediate files
+
+/TextEditor/TextEditorApp/obj/*
+/TextEditor/TextEditorDirectWrite/x64/*
+/TextEditor/TextEditorLib/obj/*
+
+# local utility scripts, etc.
+
+Sync.cmd
+Diff.cmd
+
+link.URL
