@@ -277,8 +277,8 @@ namespace TextEditor
         [StructLayout(LayoutKind.Sequential)]
         public struct EMR
         {
-            public int iType;              // Enhanced metafile record type
-            public int nSize;              // Length of the record in bytes. This must be a multiple of 4.
+            public int iType; // Enhanced metafile record type
+            public int nSize; // Length of the record in bytes. This must be a multiple of 4.
         }
 
         [StructLayout(LayoutKind.Sequential)]
@@ -304,13 +304,13 @@ namespace TextEditor
             public string elfFullName;
             [MarshalAs(UnmanagedType.ByValTStr, SizeConst = LF_FACESIZE)]
             public string elfStyle;
-            public int elfVersion;     // 0 for the first release of NT
+            public int elfVersion; // 0 for the first release of NT
             public int elfStyleSize;
             public int elfMatch;
             public int elfReserved;
             [MarshalAs(UnmanagedType.ByValArray, ArraySubType = UnmanagedType.I1, SizeConst = ELF_VENDOR_SIZE)]
             public byte[] elfVendorId;
-            public int elfCulture;     // 0 for Latin
+            public int elfCulture; // 0 for Latin
             public PANOSE elfPanose;
         }
         public const int ELF_VENDOR_SIZE = 4;

@@ -337,7 +337,7 @@ namespace TextEditor
 	    wchar_t* pwzLine = new wchar_t[line->Length + 1];
 	    pin_ptr<const wchar_t> wzLine = PtrToStringChars(line);
 	    wcsncpy_s(pwzLine, line->Length + 1, wzLine, line->Length);
-#if 1
+#if 1 // choose
         hr = service->factory->CreateTextLayout(
             pwzLine,
             line->Length,
@@ -362,16 +362,6 @@ namespace TextEditor
 		    goto Error;
         }
 
-#if 0 // forces layout to happen now. TODO: why does removing this cause crashes?
-        DWRITE_TEXT_METRICS metrics;
-        hr = textLayout->GetMetrics(&metrics);
-        if (FAILED(hr))
-        {
-		    goto Error;
-        }
-        _ASSERT(metrics.lineCount <= 1);
-#endif
-
 	    this->textLayout = textLayout;
 	    textLayout = NULL;
 
@@ -387,14 +377,6 @@ namespace TextEditor
     void TextServiceLineDirectWriteInterop::_Dispose()
     {
 	    SafeRelease(&textLayout);
-
-#if 0
-        if (clusterMetrics != NULL)
-        {
-            delete clusterMetrics;
-            clusterMetrics = NULL;
-        }
-#endif
     }
 
     HRESULT TextServiceLineDirectWriteInterop::DrawText(
@@ -405,10 +387,10 @@ namespace TextEditor
     {
         int hr;
 
-        //if (totalChars == 0)
-        //{
-        //    return S_OK;
-        //}
+        if (totalChars == 0)
+        {
+            return S_OK;
+        }
 
         this->foreColor = (unsigned int)((unsigned int)foreColor.R
 		    | ((unsigned int)foreColor.G << 8)
@@ -653,121 +635,6 @@ namespace TextEditor
     Error:
 	    return hr;
     }
-
-    // TODO: Use Windows Text Segmentation API (Windows.Data.Text) for this
-    // https://msdn.microsoft.com/en-us/library/windows/apps/windows.data.text.aspx
-    // https://code.msdn.microsoft.com/windowsapps/Text-Segmentation-API-be73de71
-    // Probably requires minimum .NET Framework 4.5
-#if 0
-    HRESULT TextServiceLineDirectWriteInterop::NextCharBoundary(
-        int offset,
-        [Out] int %nextOffset)
-    {
-	    int hr = S_OK;
-
-        hr = EnsureClusterMetrics();
-        if (FAILED(hr))
-        {
-		    goto Error;
-        }
-
-        while (offset < totalChars)
-        {
-            offset++;
-            if ((offset == totalChars) || logAttrs[offset].fCharStop)
-            {
-                break;
-            }
-        }
-        nextOffset = offset;
-
-    Error:
-	    return hr;
-    }
-
-    HRESULT TextServiceLineDirectWriteInterop::PreviousCharBoundary(
-        int offset,
-        [Out] int %prevOffset)
-    {
-	    int hr = S_OK;
-
-        hr = EnsureClusterMetrics();
-        if (FAILED(hr))
-        {
-		    goto Error;
-        }
-
-    Error:
-	    return hr;
-    }
-
-    HRESULT TextServiceLineDirectWriteInterop::NextWordBoundary(
-        int offset,
-        [Out] int %nextOffset)
-    {
-	    int hr = S_OK;
-
-        hr = EnsureClusterMetrics();
-        if (FAILED(hr))
-        {
-		    goto Error;
-        }
-
-    Error:
-	    return hr;
-    }
-
-    HRESULT TextServiceLineDirectWriteInterop::PreviousWordBoundary(
-        int offset,
-        [Out] int %prevOffset)
-    {
-	    int hr = S_OK;
-
-        hr = EnsureClusterMetrics();
-        if (FAILED(hr))
-        {
-		    goto Error;
-        }
-
-    Error:
-	    return hr;
-    }
-
-    HRESULT TextServiceLineDirectWriteInterop::EnsureClusterMetrics()
-    {
-        int hr = S_OK;
-
-        if (clusterMetrics == NULL)
-        {
-            int cMaxClusterMetrics = totalChars;
-            while (true)
-            {
-                if (clusterMetrics != NULL)
-                {
-                    delete clusterMetrics;
-                }
-                clusterMetrics = new DWRITE_CLUSTER_METRICS[cMaxClusterMetrics];
-                hr = textLayout->GetClusterMetrics(
-                    clusterMetrics,
-                    cMaxClusterMetrics,
-                    out cClusterMetrics);
-                if (hr == E_NOT_SUFFICIENT_BUFFER)
-                {
-                    cMaxClusterMetric *= 2;
-                    continue;
-                }
-                if (FAILED(hr))
-                {
-		            goto Error;
-                }
-                break;
-            }
-        }
-
-    Error:
-        return hr;
-    }
-#endif
 
 
     //

@@ -111,11 +111,6 @@ namespace TextEditor
 	    int totalChars;
 	    COLORREF foreColor;
 
-#if 0
-        DWRITE_CLUSTER_METRICS* clusterMetrics; // NULL = not yet queried
-        int cClusterMetrics;
-#endif
-
     public:
 
 	    TextServiceLineDirectWriteInterop();
@@ -158,26 +153,6 @@ namespace TextEditor
 		    int x,
 		    [Out] int %offset,
 		    [Out] bool %trailing);
-
-#if 0 // DirectWrite does not do text segmentation - now moved into Windows.Data.Text
-        HRESULT NextCharBoundary(
-            int offset,
-            [Out] int %nextOffset);
-
-        HRESULT PreviousCharBoundary(
-            int offset,
-            [Out] int %prevOffset);
-
-        HRESULT NextWordBoundary(
-            int offset,
-            [Out] int %nextOffset);
-
-        HRESULT PreviousWordBoundary(
-            int offset,
-            [Out] int %prevOffset);
-
-        HRESULT EnsureClusterMetrics();
-#endif
     };
 
 

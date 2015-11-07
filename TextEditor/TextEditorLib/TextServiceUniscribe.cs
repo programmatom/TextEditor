@@ -179,16 +179,13 @@ namespace TextEditor
                 hdcOffscreenStrip = GDIDC.Create(offscreenStrip);
             }
 
-            //using (GraphicsHDC hdc = new GraphicsHDC(graphics))
+            using (Pin<string> pinLine = new Pin<string>(line))
             {
-                using (Pin<string> pinLine = new Pin<string>(line))
-                {
-                    return TextItems.AnalyzeText(
-                        this,
-                        hdcOffscreenStrip,
-                        pinLine.AddrOfPinnedObject(),
-                        new FontRunInfo[] { new FontRunInfo(line.Length, font) });
-                }
+                return TextItems.AnalyzeText(
+                    this,
+                    hdcOffscreenStrip,
+                    pinLine.AddrOfPinnedObject(),
+                    new FontRunInfo[] { new FontRunInfo(line.Length, font) });
             }
         }
 
@@ -211,7 +208,7 @@ namespace TextEditor
             public int cGlyphs;
             public short[] glyphs;
             public short[] logicalClusters;
-            public SCRIPT_VISATTR[] visAttrs; // superceded by glyphProps
+            public SCRIPT_VISATTR[] visAttrs; // superceded by glyphProps (in OpenType version of API)
             public SCRIPT_CHARPROP[] charProps;
             public SCRIPT_GLYPHPROP[] glyphProps;
 
@@ -452,7 +449,7 @@ namespace TextEditor
                         }
                         GDI.SelectObject(hdc, gdiFont);
 
-#if false
+#if false // choose old or OpenType API
                         hr = ScriptShape(
                             hdc,
                             ref service.caches[fontCacheIndex].cache,
@@ -586,7 +583,7 @@ namespace TextEditor
                     ABC abc = new ABC();
                     {
                         int fontCacheIndex = service.FontCacheIndex(font);
-#if false
+#if false // choose old or OpenType API
                         hr = ScriptPlace(
                             hdc,
                             ref service.caches[fontCacheIndex].cache,
@@ -801,8 +798,8 @@ namespace TextEditor
                                         }
                                         return 1;
                                     },
-                                    IntPtr.Zero,
-                                    IntPtr.Zero);
+                                    IntPtr.Zero, // LPARAM
+                                    IntPtr.Zero); // &RECT
                                 if (!r)
                                 {
                                     Marshal.ThrowExceptionForHR(Marshal.GetHRForLastWin32Error());
@@ -904,9 +901,6 @@ namespace TextEditor
                 Color foreColor,
                 Color backColor)
             {
-#if false
-                int backRaw = backColor.B | (backColor.G << 8) | (backColor.R << 16);
-#endif
                 COLORREF foreColorRef = new COLORREF(foreColor);
 
                 int width = backing.Width;
@@ -917,140 +911,72 @@ namespace TextEditor
                 Debug.Assert(service.offscreenStrip.width == width);
                 Debug.Assert(service.offscreenStrip.height == height);
 
-                //using (GDIDC gdiHdcOffscreen2 = new GDIDC(service.offscreenStrip))
+                using (GDIBrush backBrush = new GDIBrush(backColor))
                 {
-                    //using (GDIRegion gdiRgnClip = new GDIRegion(graphics.Clip.GetHrgn(graphics)))
-                    {
-#if false
-                using (Brush backBrush = new SolidBrush(backColor))
-                {
-                    graphics.FillRectangle(backBrush, bounds);
+                    GDI.FillRect(service.hdcOffscreenStrip, bounds, backBrush);
                 }
-#else
-                        using (GDIBrush backBrush = new GDIBrush(backColor))
+
+                ProcessText(
+                    position,
+                    delegate(
+                        int iItem,
+                        Point where,
+                        int endX,
+                        ref SCRIPT_ITEM item,
+                        ref ItemInfo itemExtra,
+                        Font font)
+                    {
+                        if (!graphics.IsVisible(new Rectangle(where.X - height, 0, endX - where.X + 2 * height, height)))
                         {
-                            GDI.FillRect(service.hdcOffscreenStrip, bounds, backBrush);
+                            return true;
                         }
-#endif
 
-                        // Horrible hack setup
-#if false // TODO: find a better way
-                    int[] saved = null;
-                    bool first = true;
-#endif
-                        ProcessText(
-                            position,
-                            delegate(
-                                int iItem,
-                                Point where,
-                                int endX,
-                                ref SCRIPT_ITEM item,
-                                ref ItemInfo itemExtra,
-                                Font font)
-                            {
-                                if (!graphics.IsVisible(new Rectangle(where.X - height, 0, endX - where.X + 2 * height, height)))
-                                {
-                                    return true;
-                                }
+                        int fontCacheIndex = service.FontCacheIndex(font);
 
-                                int fontCacheIndex = service.FontCacheIndex(font);
+                        GDI.SetTextColor(service.hdcOffscreenStrip, foreColorRef);
+                        GDI.SetBkMode(service.hdcOffscreenStrip, GDI.TRANSPARENT);
+                        GDI.SelectObject(service.hdcOffscreenStrip, service.fontToHFont[font]);
 
-                                // Horrible HACK to compensate for ScriptTextOut clipping overhanging glyphs from it's
-                                // previously rendered run (especially problematic with large and italics/oblique faces).
-#if false // TODO: find a better way
-                            Rectangle intersection = Rectangle.Intersect(bounds, new Rectangle(where.X - height, 0, 2 * height, height));
-                            if (!intersection.IsEmpty && !first)
-                            {
-                                if (saved == null)
-                                {
-                                    saved = new int[2 * height * height];
-                                }
-                                BitmapData bits = backing.LockBits(intersection, ImageLockMode.ReadOnly, PixelFormat.Format32bppRgb);
-                                for (int y = 0; y < height; y++)
-                                {
-                                    for (int x = 0; x < intersection.Width; x++)
-                                    {
-                                        saved[x + y * 2 * height] = Marshal.ReadInt32(bits.Scan0, y * bits.Stride + x * 4) & 0x00ffffff;
-                                    }
-                                }
-                                backing.UnlockBits(bits);
-                            }
-#endif
-
-                                //using (GraphicsHDC gdiHdcOffscreen = new GraphicsHDC(graphics))
-                                {
-                                    // Graphics/GDI+ doesn't pass clip region through so we have to reset it explicitly
-                                    //GDI.SelectClipRgn(gdiHdcOffscreen2, gdiRgnClip);
-
-                                    //GDI.SetBkColor(gdiHdcOffscreen2, backColorRef);
-                                    GDI.SetTextColor(service.hdcOffscreenStrip, foreColorRef);
-                                    GDI.SetBkMode(service.hdcOffscreenStrip, GDI.TRANSPARENT);
-
-                                    GDI.SelectObject(service.hdcOffscreenStrip, service.fontToHFont[font]);
-
-                                    int hr = ScriptTextOut(
-                                        service.hdcOffscreenStrip,
-                                        ref service.caches[fontCacheIndex].cache,
-                                        where.X,
-                                        where.Y,
-                                        (ScriptTextOutOptions)0,//ScriptTextOutOptions.ETO_OPAQUE, -- no effect
-                                        IntPtr.Zero/*cliprect*/,
-                                        ref item.a,
-                                        IntPtr.Zero/*reserved*/,
-                                        0/*reserved*/,
-                                        itemExtra.glyphs,
-                                        itemExtra.cGlyphs,
-                                        itemExtra.iAdvances,
-                                        null/*piJustify*/,
-                                        itemExtra.goffsets);
-                                    if (hr < 0)
-                                    {
-                                        Marshal.ThrowExceptionForHR(hr);
-                                    }
-                                }
-
-                                // Horrible HACK part II
-#if false // TODO: find a better way
-                            if (!intersection.IsEmpty && !first)
-                            {
-                                BitmapData bits = backing.LockBits(intersection, ImageLockMode.WriteOnly, PixelFormat.Format32bppRgb);
-                                for (int y = 0; y < height; y++)
-                                {
-                                    for (int x = 0; x < intersection.Width; x++)
-                                    {
-                                        if (saved[x + y * 2 * height] != backRaw)
-                                        {
-                                            Marshal.WriteInt32(bits.Scan0, y * bits.Stride + x * 4, saved[x + y * 2 * height]);
-                                        }
-                                    }
-                                }
-                                backing.UnlockBits(bits);
-                            }
-                            first = false;
-#endif
-
-                                return true;
-                            });
-
-                        using (GDIRegion gdiRgnClip = new GDIRegion(graphics.Clip.GetHrgn(graphics)))
+                        int hr = ScriptTextOut(
+                            service.hdcOffscreenStrip,
+                            ref service.caches[fontCacheIndex].cache,
+                            where.X,
+                            where.Y,
+                            (ScriptTextOutOptions)0,
+                            IntPtr.Zero/*cliprect*/,
+                            ref item.a,
+                            IntPtr.Zero/*reserved*/,
+                            0/*reserved*/,
+                            itemExtra.glyphs,
+                            itemExtra.cGlyphs,
+                            itemExtra.iAdvances,
+                            null/*piJustify*/,
+                            itemExtra.goffsets);
+                        if (hr < 0)
                         {
-                            using (GraphicsHDC gdiHdcOffscreen = new GraphicsHDC(graphics))
-                            {
-                                // Graphics/GDI+ doesn't pass clip region through so we have to reset it explicitly
-                                GDI.SelectClipRgn(gdiHdcOffscreen, gdiRgnClip);
-
-                                GDI.BitBlt(
-                                    gdiHdcOffscreen,
-                                    0,
-                                    0,
-                                    width,
-                                    height,
-                                    service.hdcOffscreenStrip,
-                                    0,
-                                    0,
-                                    GDI.SRCCOPY);
-                            }
+                            Marshal.ThrowExceptionForHR(hr);
                         }
+
+                        return true;
+                    });
+
+                using (GDIRegion gdiRgnClip = new GDIRegion(graphics.Clip.GetHrgn(graphics)))
+                {
+                    using (GraphicsHDC gdiHdcOffscreen = new GraphicsHDC(graphics))
+                    {
+                        // Graphics/GDI+ doesn't pass clip region through so we have to reset it explicitly
+                        GDI.SelectClipRgn(gdiHdcOffscreen, gdiRgnClip);
+
+                        GDI.BitBlt(
+                            gdiHdcOffscreen,
+                            0,
+                            0,
+                            width,
+                            height,
+                            service.hdcOffscreenStrip,
+                            0,
+                            0,
+                            GDI.SRCCOPY);
                     }
                 }
             }
@@ -1319,10 +1245,12 @@ namespace TextEditor
 
         // Interop goo
 
+#if DEBUG
         private static string B(string name, bool value)
         {
             return String.Concat(Environment.NewLine, value ? name.ToUpper() : String.Concat("!", name));
         }
+#endif
 
         private const int E_OUTOFMEMORY = unchecked((int)0x8007000E);
         private const int E_PENDING = unchecked((int)0x8000000A);
@@ -1337,6 +1265,7 @@ namespace TextEditor
             public byte DigitSubstitute;
             public int dwReserved;
 
+#if DEBUG
             public override string ToString()
             {
                 return String.Format(
@@ -1345,6 +1274,7 @@ namespace TextEditor
                     TraditionalDigitLanguage,
                     DigitSubstitute);
             }
+#endif
         }
 
         // https://msdn.microsoft.com/en-us/library/windows/desktop/dd368800%28v=vs.85%29.aspx
@@ -1389,6 +1319,7 @@ namespace TextEditor
                 flags = f ? (flags | mask) : (flags & ~mask);
             }
 
+#if DEBUG
             public override string ToString()
             {
                 return String.Format(
@@ -1405,6 +1336,7 @@ namespace TextEditor
                     B("fMergeNeutralItems", fMergeNeutralItems),
                     B("fUseStandardBidi", fUseStandardBidi));
             }
+#endif
         }
 
         // https://msdn.microsoft.com/en-us/library/windows/desktop/dd374043(v=vs.85).aspx
@@ -1459,6 +1391,7 @@ namespace TextEditor
                 flags = f ? (flags | mask) : (flags & ~mask);
             }
 
+#if DEBUG
             public override string ToString()
             {
                 return String.Format(
@@ -1473,6 +1406,7 @@ namespace TextEditor
                     B("fArabicNumContext", fArabicNumContext),
                     B("fGcpClusters", fGcpClusters));
             }
+#endif
         }
 
         private const int SCRIPT_UNDEFINED = 0;
@@ -1484,6 +1418,7 @@ namespace TextEditor
             public int iCharPos;
             public SCRIPT_ANALYSIS a;
 
+#if DEBUG
             public override string ToString()
             {
                 return String.Format(
@@ -1491,7 +1426,9 @@ namespace TextEditor
                     iCharPos,
                     a.ToString());
             }
+#endif
         }
+
         [StructLayout(LayoutKind.Sequential)]
         private struct SCRIPT_ANALYSIS
         {
@@ -1540,6 +1477,7 @@ namespace TextEditor
                 flags = f ? (flags | mask) : (flags & ~mask);
             }
 
+#if DEBUG
             public override string ToString()
             {
                 return String.Format(
@@ -1553,6 +1491,7 @@ namespace TextEditor
                     B("fNoGlyphIndex", fNoGlyphIndex),
                     s.ToString());
             }
+#endif
         }
 
         // https://msdn.microsoft.com/en-us/library/windows/desktop/dd374046%28v=vs.85%29.aspx
@@ -1597,6 +1536,7 @@ namespace TextEditor
                 flags = f ? (flags | mask) : (flags & ~mask);
             }
 
+#if DEBUG
             public override string ToString()
             {
                 return String.Format(
@@ -1606,6 +1546,7 @@ namespace TextEditor
                     B("fDiacritic", fDiacritic),
                     B("fZeroWidth", fZeroWidth));
             }
+#endif
         }
 
         // https://msdn.microsoft.com/en-us/library/windows/desktop/dd374041(v=vs.85).aspx
@@ -1639,6 +1580,7 @@ namespace TextEditor
                 flags = f ? (flags | mask) : (flags & ~mask);
             }
 
+#if DEBUG
             public override string ToString()
             {
                 return String.Format(
@@ -1649,6 +1591,7 @@ namespace TextEditor
                     B("fWordStop", fWordStop),
                     B("fInvalid", fInvalid));
             }
+#endif
         }
 
         // https://msdn.microsoft.com/en-us/library/windows/desktop/dd368798%28v=vs.85%29.aspx
@@ -1706,6 +1649,7 @@ namespace TextEditor
         {
             public UInt32 tag; // char[4] identifier
 
+#if DEBUG
             public override string ToString()
             {
                 if (tag == SCRIPT_TAG_UNKNOWN)
@@ -1722,6 +1666,7 @@ namespace TextEditor
                         (char)(byte)(tag >> 24));
                 }
             }
+#endif
         }
         private const uint SCRIPT_TAG_UNKNOWN = 0x00000000;
 
@@ -1903,9 +1848,6 @@ namespace TextEditor
             [Out] GOFFSET[] pGoffset,
             [Out, MarshalAs(UnmanagedType.Struct)] out ABC pABC);
 
-        // TODO: ScriptBreak
-        // https://msdn.microsoft.com/en-us/library/windows/desktop/dd319118%28v=vs.85%29.aspx
-
         // https://msdn.microsoft.com/en-us/library/windows/desktop/dd368559%28v=vs.85%29.aspx
         [DllImport("usp10.dll")]
         [return: MarshalAs(UnmanagedType.Error)]
@@ -2019,19 +1961,19 @@ namespace TextEditor
         [DllImport("usp10.dll")]
         [return: MarshalAs(UnmanagedType.Error)]
         private static extern int ScriptStringAnalyse(
-            IntPtr hdc,        //In  Device context (required)
-            IntPtr pString,   //In  String in 8 or 16 bit characters
-            int cString,    //In  Length in characters (Must be at least 1)
-            int cGlyphs,    //In  Required glyph buffer size (default cString*1.5 + 16)
-            int iCharset,   //In  Charset if an ANSI string, -1 for a Unicode string
-            int dwFlags,    //In  Analysis required
-            int iReqWidth,  //In  Required width for fit and/or clip
-            [In, Optional] IntPtr /*SCRIPT_CONTROL*/               psControl, //In  Analysis control (optional)
-            [In, Optional] IntPtr /*SCRIPT_STATE*/                 psState,   //In  Analysis initial state (optional)
-            [In, Optional, MarshalAs(UnmanagedType.LPArray, SizeParamIndex = 2)] int[] piDx,      //In  Requested logical dx array
-            [In, Optional] IntPtr /*SCRIPT_TABDEF*/                pTabdef,   //In  Tab positions (optional)
+            IntPtr hdc, //In  Device context (required)
+            IntPtr pString, //In  String in 8 or 16 bit characters
+            int cString, //In  Length in characters (Must be at least 1)
+            int cGlyphs, //In  Required glyph buffer size (default cString*1.5 + 16)
+            int iCharset, //In  Charset if an ANSI string, -1 for a Unicode string
+            int dwFlags, //In  Analysis required
+            int iReqWidth, //In  Required width for fit and/or clip
+            [In, Optional] IntPtr/*SCRIPT_CONTROL*/ psControl, //In  Analysis control (optional)
+            [In, Optional] IntPtr/*SCRIPT_STATE*/ psState, //In  Analysis initial state (optional)
+            [In, Optional, MarshalAs(UnmanagedType.LPArray, SizeParamIndex = 2)] int[] piDx, //In  Requested logical dx array
+            [In, Optional] IntPtr /*SCRIPT_TABDEF*/ pTabdef, //In  Tab positions (optional)
             [In] byte[] pbInClass, //In  Legacy GetCharacterPlacement character classifications (deprecated)
-            [Out] out IntPtr/*SCRIPT_STRING_ANALYSIS*/    pssa);     //Out Analysis of string
+            [Out] out IntPtr/*SCRIPT_STRING_ANALYSIS*/ pssa); //Out Analysis of string
 
         private const int SSA_PASSWORD = 0x00000001; // Input string contains a single character to be duplicated iLength times
         private const int SSA_TAB = 0x00000002; // Expand tabs
@@ -2063,7 +2005,7 @@ namespace TextEditor
             int iX,
             int iY,
             int uOptions, //In  ExtTextOut options
-            [In, Optional] IntPtr /*RECT*/           prc, //In  Clipping rectangle (iff ETO_CLIPPED)
+            [In, Optional] IntPtr/*RECT*/ prc, //In  Clipping rectangle (iff ETO_CLIPPED)
             int iMinSel, //In  Logical selection. Set iMinSel>=iMaxSel for no selection
             int iMaxSel,
             [In, MarshalAs(UnmanagedType.Bool)] bool fDisabled); //In  If disabled, only the background is highlighted.

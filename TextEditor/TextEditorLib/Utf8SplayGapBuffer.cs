@@ -466,8 +466,8 @@ namespace TextEditor
 
         public Utf8SplayGapBuffer(
             Stream stream,
-            bool detectBom, 
-            Encoding encoding, 
+            bool detectBom,
+            Encoding encoding,
             out LineEndingInfo lineEndingInfo)
         {
             byte[] buffer = new byte[vector.TargetBlockSize];
@@ -558,15 +558,7 @@ namespace TextEditor
                     }
                     nextStart++;
                 }
-#if false
-                skipList.LineInserted(
-                    currentLine,
-                    nextStart - currentOffset,
-                    delegate(int line)
-                    {
-                        return GetStartIndexOfLineRelative(line - currentLine, currentOffset);
-                    });
-#else
+
                 currentSkipNumLines++;
                 currentSkipCharLength += nextStart - currentOffset;
                 if (currentSkipNumLines > SkipList.SkipListSparseness)
@@ -577,7 +569,6 @@ namespace TextEditor
                     currentSkipCharOffset += currentSkipCharLength;
                     currentSkipCharLength = 0;
                 }
-#endif
 
                 currentLine++;
                 totalLines++;
@@ -596,13 +587,8 @@ namespace TextEditor
             else
             {
                 // last line was unterminated - back it out
-#if false
-                skipList.LineLengthChanged(currentLine, 1);
-                skipList.LineRemoved(currentLine, -1);
-#else
                 skipList.LineRemoved(currentLine, -suffixLength);
                 skipList.LineLengthChanged(currentLine, suffixLength);
-#endif
 
                 currentOffset += suffixLength;
             }

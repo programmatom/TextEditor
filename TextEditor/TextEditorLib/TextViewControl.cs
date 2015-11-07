@@ -53,7 +53,7 @@ namespace TextEditor
 
         private bool cursorEnabledFlag = true;
         private bool cursorDrawnFlag = true;
-        //private bool cursorAdvancing = true; // for Uniscript, see https://msdn.microsoft.com/en-us/library/windows/desktop/dd317793%28v=vs.85%29.aspx
+        //private bool cursorAdvancing = true; // TODO: for Uniscript, see https://msdn.microsoft.com/en-us/library/windows/desktop/dd317793%28v=vs.85%29.aspx
 
         private int clickPhase;
         private int lastClickX;
@@ -378,7 +378,7 @@ namespace TextEditor
             for (int i = 0; i < textStorage.Count; i++)
             {
                 ITextLine line = textStorage[i];
-#if false
+#if false // not that important
                 using (IDecodedTextLine decodedLine = line.Decode_MustDispose())
                 {
                     string s = decodedLine.Value;
