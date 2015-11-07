@@ -2,6 +2,7 @@
 
 /TextEditor/TextEditorApp/obj/*
 /TextEditor/TextEditorDirectWrite/x64/*
+/TextEditor/TextEditorDirectWrite/*.vcproj.*.user
 /TextEditor/TextEditorLib/obj/*
 
 # local utility scripts, etc.

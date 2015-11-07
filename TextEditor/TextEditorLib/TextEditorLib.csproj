@@ -1,0 +1,120 @@
+﻿<Project DefaultTargets="Build" xmlns="http://schemas.microsoft.com/developer/msbuild/2003">
+  <PropertyGroup>
+    <Configuration Condition=" '$(Configuration)' == '' ">Debug</Configuration>
+    <Platform Condition=" '$(Platform)' == '' ">AnyCPU</Platform>
+    <ProductVersion>8.0.50727</ProductVersion>
+    <SchemaVersion>2.0</SchemaVersion>
+    <ProjectGuid>{03F7A42F-5BF1-4E91-8416-3453840AFA29}</ProjectGuid>
+    <OutputType>Library</OutputType>
+    <AppDesignerFolder>Properties</AppDesignerFolder>
+    <RootNamespace>TextEditorLib</RootNamespace>
+    <AssemblyName>TextEditorLib</AssemblyName>
+  </PropertyGroup>
+  <PropertyGroup Condition=" '$(Configuration)|$(Platform)' == 'Debug|AnyCPU' ">
+    <DebugSymbols>true</DebugSymbols>
+    <DebugType>full</DebugType>
+    <Optimize>false</Optimize>
+    <OutputPath>bin\Debug\</OutputPath>
+    <DefineConstants>DEBUG;TRACE</DefineConstants>
+    <ErrorReport>prompt</ErrorReport>
+    <WarningLevel>4</WarningLevel>
+  </PropertyGroup>
+  <PropertyGroup Condition=" '$(Configuration)|$(Platform)' == 'Release|AnyCPU' ">
+    <DebugType>pdbonly</DebugType>
+    <Optimize>true</Optimize>
+    <OutputPath>bin\Release\</OutputPath>
+    <DefineConstants>TRACE</DefineConstants>
+    <ErrorReport>prompt</ErrorReport>
+    <WarningLevel>4</WarningLevel>
+  </PropertyGroup>
+  <ItemGroup>
+    <Reference Include="System" />
+    <Reference Include="System.Data" />
+    <Reference Include="System.Drawing" />
+    <Reference Include="System.Windows.Forms" />
+    <Reference Include="System.Xml" />
+  </ItemGroup>
+  <ItemGroup>
+    <Compile Include="ANSIEncoding.cs" />
+    <Compile Include="FindDialog.cs">
+      <SubType>Form</SubType>
+    </Compile>
+    <Compile Include="FindDialog.designer.cs">
+      <DependentUpon>FindDialog.cs</DependentUpon>
+    </Compile>
+    <Compile Include="FragmentList.cs" />
+    <Compile Include="Gdi.cs" />
+    <Compile Include="GoToDialog.cs">
+      <SubType>Form</SubType>
+    </Compile>
+    <Compile Include="GoToDialog.designer.cs">
+      <DependentUpon>GoToDialog.cs</DependentUpon>
+    </Compile>
+    <Compile Include="ITextService.cs" />
+    <Compile Include="ITextStorage.cs" />
+    <Compile Include="Marshal2.cs" />
+    <Compile Include="Pinning.cs" />
+    <Compile Include="Properties\AssemblyInfo.cs" />
+    <Compile Include="ProtectedStorage.cs">
+      <SubType>Component</SubType>
+    </Compile>
+    <Compile Include="SkipList.cs" />
+    <Compile Include="SplayRangeArray.cs" />
+    <Compile Include="SplaySparseArray.cs" />
+    <Compile Include="SplaySparseRangeArray.cs" />
+    <Compile Include="SplayVector.cs" />
+    <Compile Include="StringStorage.cs">
+      <SubType>Component</SubType>
+    </Compile>
+    <Compile Include="TextEditControl.cs">
+      <SubType>UserControl</SubType>
+    </Compile>
+    <Compile Include="TextEditControl.designer.cs">
+      <DependentUpon>TextEditControl.cs</DependentUpon>
+    </Compile>
+    <Compile Include="TextEditorWindowHelper.cs">
+      <SubType>Component</SubType>
+    </Compile>
+    <Compile Include="TextEditorWindowHelper.designer.cs">
+      <DependentUpon>TextEditorWindowHelper.cs</DependentUpon>
+    </Compile>
+    <Compile Include="TextServiceDirectWrite.cs" />
+    <Compile Include="TextServiceSimple.cs" />
+    <Compile Include="TextServiceUniscribe.cs" />
+    <Compile Include="TextStorage.cs" />
+    <Compile Include="TextViewControl.cs">
+      <SubType>UserControl</SubType>
+    </Compile>
+    <Compile Include="TextViewControl.designer.cs">
+      <DependentUpon>TextViewControl.cs</DependentUpon>
+    </Compile>
+    <Compile Include="Utf8SplayGapBuffer.cs" />
+    <Compile Include="Utf8SplayGapStorage.cs">
+      <SubType>Component</SubType>
+    </Compile>
+  </ItemGroup>
+  <ItemGroup>
+    <EmbeddedResource Include="FindDialog.resx">
+      <DependentUpon>FindDialog.cs</DependentUpon>
+      <SubType>Designer</SubType>
+    </EmbeddedResource>
+    <EmbeddedResource Include="GoToDialog.resx">
+      <DependentUpon>GoToDialog.cs</DependentUpon>
+      <SubType>Designer</SubType>
+    </EmbeddedResource>
+  </ItemGroup>
+  <ItemGroup>
+    <ProjectReference Include="..\TextEditorDirectWrite\TextEditorDirectWrite.vcproj">
+      <Project>{6B12E0ED-2907-40D8-AF0E-6FBA4E96BE50}</Project>
+      <Name>TextEditorDirectWrite</Name>
+    </ProjectReference>
+  </ItemGroup>
+  <Import Project="$(MSBuildBinPath)\Microsoft.CSharp.targets" />
+  <!-- To modify your build process, add your task inside one of the targets below and uncomment it. 
+       Other similar extension points exist, see Microsoft.Common.targets.
+  <Target Name="BeforeBuild">
+  </Target>
+  <Target Name="AfterBuild">
+  </Target>
+  -->
+</Project>
