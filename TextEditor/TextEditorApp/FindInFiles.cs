@@ -39,61 +39,110 @@ namespace TextEditor
         private FindInFilesTask task;
         private readonly Dictionary<string, TextEditorWindow> windows = new Dictionary<string, TextEditorWindow>();
 
-        private int last;
-        private static int counter;
-        private static Dictionary<string, int> everSearched;
+        private static int lastPathNumber;
+        private static int pathCounter;
+        private static Dictionary<string, int> searchedPaths;
+
+        private static int lastExtensionNumber;
+        private static int extensionCounter;
+        private static Dictionary<string, int> searchedExtensions;
 
         public FindInFiles()
         {
             InitializeComponent();
 
-            if (everSearched == null)
-            {
-                everSearched = new Dictionary<string, int>();
-                SearchPaths searchPaths = MainClass.Config.SearchPaths;
-                foreach (string path in searchPaths.paths)
-                {
-                    int current = counter++;
-                    everSearched.Add(path, current);
-                    if (String.Equals(path, searchPaths.last))
-                    {
-                        last = current;
-                    }
-                }
-            }
-            KeyValuePair<string, int>[] everSearched2 = new KeyValuePair<string, int>[everSearched.Count];
-            int i = 0;
-            foreach (KeyValuePair<string, int> item in everSearched)
-            {
-                everSearched2[i++] = item;
-            }
-            Array.Sort(everSearched2, delegate(KeyValuePair<string, int> l, KeyValuePair<string, int> r) { return l.Value.CompareTo(r.Value); });
-            foreach (KeyValuePair<string, int> item in everSearched2)
-            {
-                comboBoxSearchPath.Items.Add(item.Key);
-                if (item.Value == last)
-                {
-                    comboBoxSearchPath.SelectedItem = item.Key;
-                }
-            }
+            SetUpComboBox(
+                ref pathCounter,
+                ref lastPathNumber,
+                ref searchedPaths,
+                MainClass.Config.SearchPaths,
+                comboBoxSearchPath);
             comboBoxSearchPath.SelectedValueChanged += new EventHandler(comboBoxSearchPath_SelectedValueChanged);
+
+            SetUpComboBox(
+                ref extensionCounter,
+                ref lastExtensionNumber,
+                ref searchedExtensions,
+                MainClass.Config.SearchExtensions,
+                comboBoxSearchExtensions);
+            comboBoxSearchExtensions.SelectedValueChanged += new EventHandler(comboBoxSearchExtensions_SelectedValueChanged);
 
             dataGridViewFindResults.DataSource = new BindingSource(results, null);
             dataGridViewFindResults.CellMouseDoubleClick += new DataGridViewCellMouseEventHandler(dataGridViewFindResults_CellMouseDoubleClick);
+            dataGridViewFindResults.EnterKeyPressed += new EventHandler(dataGridViewFindResults_EnterKeyPressed);
+        }
+
+        private static void SetUpComboBox(
+            ref int counter,
+            ref int lastNumber,
+            ref Dictionary<string, int> searched,
+            SearchCombos searchCombos,
+            ComboBox comboBox)
+        {
+            if (searched == null)
+            {
+                searched = new Dictionary<string, int>();
+                foreach (string item in searchCombos.items)
+                {
+                    int current = counter++;
+                    searched.Add(item, current);
+                    if (String.Equals(item, searchCombos.last))
+                    {
+                        lastNumber = current;
+                    }
+                }
+            }
+            KeyValuePair<string, int>[] searched2 = new KeyValuePair<string, int>[searched.Count];
+            int i = 0;
+            foreach (KeyValuePair<string, int> item in searched)
+            {
+                searched2[i++] = item;
+            }
+            Array.Sort(searched2, delegate(KeyValuePair<string, int> l, KeyValuePair<string, int> r) { return l.Value.CompareTo(r.Value); });
+            foreach (KeyValuePair<string, int> item in searched2)
+            {
+                comboBox.Items.Add(item.Key);
+                if (item.Value == lastNumber)
+                {
+                    comboBox.SelectedItem = item.Key;
+                }
+            }
+        }
+
+        protected override void OnFormClosing(FormClosingEventArgs e)
+        {
+            if (task != null)
+            {
+                task.CancelAsync();
+            }
+            base.OnFormClosing(e);
         }
 
         private void comboBoxSearchPath_SelectedValueChanged(object sender, EventArgs e)
         {
             int i;
-            if (everSearched.TryGetValue(this.comboBoxSearchPath.Text, out i))
+            if (searchedPaths.TryGetValue(this.comboBoxSearchPath.Text, out i))
             {
-                last = i;
+                lastPathNumber = i;
+            }
+        }
+
+        private void comboBoxSearchExtensions_SelectedValueChanged(object sender, EventArgs e)
+        {
+            int i;
+            if (searchedExtensions.TryGetValue(this.comboBoxSearchExtensions.Text, out i))
+            {
+                lastExtensionNumber = i;
             }
         }
 
         private void dataGridViewFindResults_CellMouseDoubleClick(object sender, DataGridViewCellMouseEventArgs e)
         {
-            int r = e.RowIndex;
+            if (dataGridViewFindResults.CurrentRow == null)
+            {
+                return;
+            }
+            int r = dataGridViewFindResults.CurrentRow.Index; //e.RowIndex;
             FindInFilesEntry entry = results[r];
             TextEditorWindow window;
             if (windows.TryGetValue(entry.Path, out window))
@@ -116,6 +165,11 @@ namespace TextEditor
                 window.Activate();
             }
             window.SetSelection(Math.Max(entry.LineNumber - 1, 0), entry.StartChar, Math.Max(entry.LineNumber - 1, 0), entry.EndCharP1);
+        }
+
+        private void dataGridViewFindResults_EnterKeyPressed(object sender, EventArgs e)
+        {
+            dataGridViewFindResults_CellMouseDoubleClick(sender, null);
         }
 
         private void buttonFind_Click(object sender, EventArgs e)
@@ -144,24 +198,47 @@ namespace TextEditor
                 }
 
                 int pathIndex;
-                if (!everSearched.TryGetValue(fullPath, out pathIndex))
+                if (!searchedPaths.TryGetValue(fullPath, out pathIndex))
                 {
-                    pathIndex = counter++;
-                    everSearched.Add(fullPath, pathIndex);
+                    pathIndex = pathCounter++;
+                    searchedPaths.Add(fullPath, pathIndex);
                 }
-                last = pathIndex;
+                lastPathNumber = pathIndex;
+                int extensionIndex;
+                if (!searchedExtensions.TryGetValue(comboBoxSearchExtensions.Text, out extensionIndex))
+                {
+                    extensionIndex = extensionCounter++;
+                    searchedExtensions.Add(comboBoxSearchExtensions.Text, extensionIndex);
+                }
+                lastExtensionNumber = extensionIndex;
                 UpdateSettings();
+
+                if (!comboBoxSearchPath.Items.Contains(fullPath))
+                {
+                    comboBoxSearchPath.Items.Add(fullPath);
+                    comboBoxSearchPath.SelectedValue = fullPath;
+                }
+                if (!comboBoxSearchExtensions.Items.Contains(comboBoxSearchExtensions.Text))
+                {
+                    string text = comboBoxSearchExtensions.Text;
+                    comboBoxSearchExtensions.Items.Add(text);
+                    comboBoxSearchExtensions.SelectedValue = text;
+                }
 
                 results.Clear();
                 task = new FindInFilesTask(
                     this.textBoxSearchFor.Text,
                     fullPath,
+                    comboBoxSearchExtensions.Text,
                     this.checkBoxCaseSensitive.Checked,
                     this.checkBoxMatchWholeWord.Checked);
                 task.ProgressChanged += new ProgressChangedEventHandler(task_ProgressChanged);
                 task.RunWorkerCompleted += new RunWorkerCompletedEventHandler(task_RunWorkerCompleted);
                 buttonFind.Text = "Stop Find";
                 task.RunWorkerAsync();
+                timerStatusUpdate.Start();
+
+                dataGridViewFindResults.Focus();
             }
             else
             {
@@ -170,34 +247,98 @@ namespace TextEditor
                 task.RunWorkerCompleted -= new RunWorkerCompletedEventHandler(task_RunWorkerCompleted);
                 buttonFind.Text = "Find";
                 task = null;
+                labelStatus.Text = null;
+                timerStatusUpdate.Stop();
             }
+        }
+
+        private static SearchCombos GetCombo(
+            Dictionary<string, int> searched,
+            int lastNumber)
+        {
+            List<string> items = new List<string>();
+            string last = null;
+            foreach (KeyValuePair<string, int> item in searched)
+            {
+                items.Add(item.Key);
+                if (lastNumber == item.Value)
+                {
+                    last = item.Key;
+                }
+            }
+            return new SearchCombos(items.ToArray(), last);
         }
 
         private void UpdateSettings()
         {
-            List<string> paths = new List<string>();
-            string lastPath = null;
-            foreach (KeyValuePair<string, int> path in everSearched)
-            {
-                paths.Add(path.Key);
-                if (last == path.Value)
-                {
-                    lastPath = path.Key;
-                }
-            }
-            MainClass.Config.SearchPaths = new SearchPaths(paths.ToArray(), lastPath);
+            MainClass.Config.SearchPaths = GetCombo(searchedPaths, lastPathNumber);
+            MainClass.Config.SearchExtensions = GetCombo(searchedExtensions, lastExtensionNumber);
             MainClass.SaveSettings();
         }
 
         private void task_ProgressChanged(object sender, ProgressChangedEventArgs e)
         {
-            results.Add((FindInFilesEntry)e.UserState);
+            if (!IsDisposed)
+            {
+                results.Add((FindInFilesEntry)e.UserState);
+            }
         }
 
         private void task_RunWorkerCompleted(object sender, RunWorkerCompletedEventArgs e)
         {
             buttonFind.Text = "Find";
             task = null;
+            labelStatus.Text = null;
+            timerStatusUpdate.Stop();
+        }
+
+        private void timerStatusUpdate_Tick(object sender, EventArgs e)
+        {
+            string status = String.Empty;
+            if (task != null)
+            {
+                status = task.CurrentPath;
+            }
+            labelStatus.Text = status;
+        }
+
+        private void buttonFileDialog_Click(object sender, EventArgs e)
+        {
+            // TODO: FolderBrowserDialog is crap, but you have to hack OpenFileDialog for something usable
+            using (FolderBrowserDialog dialog = new FolderBrowserDialog())
+            {
+                if (dialog.ShowDialog() == DialogResult.OK)
+                {
+                    comboBoxSearchPath.Text = dialog.SelectedPath;
+                }
+            }
+        }
+    }
+
+    public class MyDataGridView : DataGridView
+    {
+        public event EventHandler EnterKeyPressed;
+
+        protected override bool ProcessCmdKey(ref Message msg, Keys keyData)
+        {
+            if (keyData == Keys.Enter)
+            {
+                if (EnterKeyPressed != null)
+                {
+                    EnterKeyPressed.Invoke(this, EventArgs.Empty);
+                }
+                return true;
+            }
+
+            return base.ProcessCmdKey(ref msg, keyData);
+        }
+    }
+
+    public class MyLabel : Label
+    {
+        protected override void OnPaint(PaintEventArgs e)
+        {
+            TextRenderer.DrawText(e.Graphics, Text, Font, ClientRectangle, ForeColor, BackColor, TextFormatFlags.PathEllipsis | TextFormatFlags.SingleLine);
         }
     }
 
@@ -231,13 +372,16 @@ namespace TextEditor
     public class FindInFilesTask : BackgroundWorker
     {
         private readonly string pattern;
+        private readonly string[] extensions;
         private readonly string root;
         private readonly bool caseSensitive;
         private readonly bool matchWholeWords;
+        private string currentPath;
 
         public FindInFilesTask(
             string pattern,
             string root,
+            string extensions,
             bool caseSensitive,
             bool matchWholeWords)
         {
@@ -253,12 +397,29 @@ namespace TextEditor
 
             this.pattern = pattern;
             this.root = fullRoot;
+            if (!String.IsNullOrEmpty(extensions))
+            {
+                this.extensions = extensions.Split(new char[] { ';' }, StringSplitOptions.RemoveEmptyEntries);
+                for (int i = 0; i < this.extensions.Length; i++)
+                {
+                    if (this.extensions[i].StartsWith("*"))
+                    {
+                        this.extensions[i] = this.extensions[i].Substring(1);
+                    }
+                    if (!this.extensions[i].StartsWith("."))
+                    {
+                        this.extensions[i] = String.Concat(".", this.extensions[i]);
+                    }
+                }
+            }
             this.caseSensitive = caseSensitive;
             this.matchWholeWords = matchWholeWords;
 
             this.WorkerReportsProgress = true;
             this.WorkerSupportsCancellation = true;
         }
+
+        public string CurrentPath { get { return currentPath; } }
 
         protected override void OnDoWork(DoWorkEventArgs e)
         {
@@ -269,6 +430,8 @@ namespace TextEditor
 
         private void EnumerateRecursive(string root, string relative, out bool cancelled)
         {
+            currentPath = root;
+
             cancelled = false;
             foreach (string file in Directory.GetFiles(root))
             {
@@ -276,6 +439,23 @@ namespace TextEditor
                 {
                     cancelled = true;
                     return;
+                }
+                if (extensions != null)
+                {
+                    string fileExtension = Path.GetExtension(file);
+                    bool include = false;
+                    foreach (string extension in extensions)
+                    {
+                        include = String.Equals(fileExtension, extension, StringComparison.OrdinalIgnoreCase);
+                        if (include)
+                        {
+                            break;
+                        }
+                    }
+                    if (!include)
+                    {
+                        continue;
+                    }
                 }
                 TestFile(file, relative);
             }

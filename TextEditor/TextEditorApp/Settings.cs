@@ -72,20 +72,20 @@ namespace TextEditor
         }
     }
 
-    public struct SearchPaths
+    public struct SearchCombos
     {
-        public string[] paths;
+        public string[] items;
         public string last;
 
-        public SearchPaths(string[] paths, string last)
+        public SearchCombos(string[] items, string last)
         {
-            this.paths = paths;
+            this.items = items;
             this.last = last;
         }
 
-        public SearchPaths(SearchPaths orig)
+        public SearchCombos(SearchCombos orig)
         {
-            this.paths = orig.paths;
+            this.items = orig.items;
             this.last = orig.last;
         }
     }
@@ -97,7 +97,8 @@ namespace TextEditor
         private int height;
         private BackingStore backingStore = BackingStore.String;
         private TextService textService = TextService.Simple;
-        private SearchPaths searchPaths = new SearchPaths();
+        private SearchCombos searchPaths = new SearchCombos();
+        private SearchCombos searchExtensions = new SearchCombos();
 
         public EditorConfigList()
         {
@@ -116,7 +117,8 @@ namespace TextEditor
             this.height = original.height;
             this.backingStore = original.backingStore;
             this.textService = original.textService;
-            this.searchPaths = new SearchPaths(original.searchPaths);
+            this.searchPaths = new SearchCombos(original.searchPaths);
+            this.searchExtensions = new SearchCombos(original.searchExtensions);
 
             configs.Clear();
             foreach (EditorConfig origConfig in original.configs)
@@ -173,7 +175,7 @@ namespace TextEditor
             }
         }
 
-        public SearchPaths SearchPaths
+        public SearchCombos SearchPaths
         {
             get
             {
@@ -182,6 +184,18 @@ namespace TextEditor
             set
             {
                 searchPaths = value;
+            }
+        }
+
+        public SearchCombos SearchExtensions
+        {
+            get
+            {
+                return searchExtensions;
+            }
+            set
+            {
+                searchExtensions = value;
             }
         }
 
@@ -261,18 +275,34 @@ namespace TextEditor
             catch (NullReferenceException)
             {
             }
-            List<string> searchPathStrings = new List<string>();
-            string searchPathLast = null;
-            foreach (XPathNavigator searchPath in xml.CreateNavigator().Select("/settings/searchPaths/searchPath"))
             {
-                searchPathStrings.Add(searchPath.Value);
-                XPathNavigator last = searchPath.SelectSingleNode("@last");
-                if ((last != null) && last.ValueAsBoolean)
+                List<string> searchPathStrings = new List<string>();
+                string searchPathLast = null;
+                foreach (XPathNavigator searchPath in xml.CreateNavigator().Select("/settings/searchPaths/searchPath"))
                 {
-                    searchPathLast = searchPath.Value;
+                    searchPathStrings.Add(searchPath.Value);
+                    XPathNavigator last = searchPath.SelectSingleNode("@last");
+                    if ((last != null) && last.ValueAsBoolean)
+                    {
+                        searchPathLast = searchPath.Value;
+                    }
                 }
+                searchPaths = new SearchCombos(searchPathStrings.ToArray(), searchPathLast);
             }
-            searchPaths = new SearchPaths(searchPathStrings.ToArray(), searchPathLast);
+            {
+                List<string> searchExtStrings = new List<string>();
+                string searchExtLast = null;
+                foreach (XPathNavigator searchExt in xml.CreateNavigator().Select("/settings/searchExtensions/searchExtension"))
+                {
+                    searchExtStrings.Add(searchExt.Value);
+                    XPathNavigator last = searchExt.SelectSingleNode("@last");
+                    if ((last != null) && last.ValueAsBoolean)
+                    {
+                        searchExtLast = searchExt.Value;
+                    }
+                }
+                searchExtensions = new SearchCombos(searchExtStrings.ToArray(), searchExtLast);
+            }
 
             foreach (XPathNavigator nav in xml.CreateNavigator().Select("/settings/config"))
             {
@@ -324,7 +354,7 @@ namespace TextEditor
                     writer.WriteEndElement();
 
                     writer.WriteStartElement("searchPaths");
-                    foreach (string searchPath in searchPaths.paths)
+                    foreach (string searchPath in searchPaths.items)
                     {
                         writer.WriteStartElement("searchPath");
                         if (String.Equals(searchPath, SearchPaths.last))
@@ -334,6 +364,21 @@ namespace TextEditor
                             writer.WriteEndAttribute();
                         }
                         writer.WriteValue(searchPath);
+                        writer.WriteEndElement();
+                    }
+                    writer.WriteEndElement();
+
+                    writer.WriteStartElement("searchExtensions");
+                    foreach (string searchExt in searchExtensions.items)
+                    {
+                        writer.WriteStartElement("searchExtension");
+                        if (String.Equals(searchExt, SearchExtensions.last))
+                        {
+                            writer.WriteStartAttribute("last");
+                            writer.WriteValue(true);
+                            writer.WriteEndAttribute();
+                        }
+                        writer.WriteValue(searchExt);
                         writer.WriteEndElement();
                     }
                     writer.WriteEndElement();
