@@ -825,7 +825,7 @@ namespace TextEditor
             }
         }
 
-        private TextEditorWindow GetWindowForLoadHelper()
+        public static TextEditorWindow GetWindowForLoadHelper()
         {
             TextEditorWindow window;
             if ((MainClass.defaultEmptyForm != null)
@@ -1080,6 +1080,46 @@ namespace TextEditor
                 textEditControl.RightToLeft = RightToLeft.Yes;
                 rightToLeftToolStripMenuItem.Checked = true;
             }
+        }
+
+        protected override void OnDragEnter(DragEventArgs drgevent)
+        {
+            base.OnDragEnter(drgevent);
+            if (drgevent.Data.GetDataPresent(DataFormats.FileDrop))
+            {
+                drgevent.Effect = DragDropEffects.Copy;
+            }
+        }
+
+        protected override void OnDragDrop(DragEventArgs drgevent)
+        {
+            base.OnDragDrop(drgevent);
+            string[] files = (string[])drgevent.Data.GetData(DataFormats.FileDrop);
+            foreach (string file in files)
+            {
+                TextEditorWindow window = GetWindowForLoadHelper();
+                try
+                {
+                    window.LoadFile(file);
+                    window.Show();
+                }
+                catch (ApplicationException)
+                {
+                    // thrown if user cancels load after prompted for possible wrong encoding
+                    window.Dispose();
+                }
+            }
+        }
+
+        private void findInFilesToolStripMenuItem_Click(object sender, EventArgs e)
+        {
+            new FindInFiles().Show();
+        }
+
+        public void SetSelection(int startLine, int startChar, int endLine, int endCharP1)
+        {
+            textEditControl.SetSelection(startLine, startChar, endLine, endCharP1);
+            textEditControl.ScrollToSelection();
         }
     }
 }

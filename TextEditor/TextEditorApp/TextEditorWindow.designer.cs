@@ -105,6 +105,8 @@ namespace TextEditor
             this.helper = new TextEditor.TextEditorWindowHelper(this.components);
             this.protectedStorageFactory = new TextEditor.ProtectedStorageFactory();
             this.utf8SplayGapBufferFactory = new TextEditor.Utf8SplayGapStorageFactory();
+            this.toolStripMenuItem13 = new System.Windows.Forms.ToolStripSeparator();
+            this.findInFilesToolStripMenuItem = new System.Windows.Forms.ToolStripMenuItem();
             this.menuStrip.SuspendLayout();
             this.tableLayoutPanel1.SuspendLayout();
             this.toolStrip.SuspendLayout();
@@ -513,6 +515,7 @@ namespace TextEditor
             // tabSizeToolStripMenuItem
             // 
             this.tabSizeToolStripMenuItem.Name = "tabSizeToolStripMenuItem";
+            this.tabSizeToolStripMenuItem.ShortcutKeys = ((System.Windows.Forms.Keys)((System.Windows.Forms.Keys.Control | System.Windows.Forms.Keys.T)));
             this.tabSizeToolStripMenuItem.Size = new System.Drawing.Size(202, 22);
             this.tabSizeToolStripMenuItem.Text = "&Tab Size...";
             this.tabSizeToolStripMenuItem.Click += new System.EventHandler(this.tabSizeToolStripMenuItem_Click);
@@ -554,7 +557,9 @@ namespace TextEditor
             this.previousUTF16SurrogatePairToolStripMenuItem,
             this.nextUTF16SurrogatePairToolStripMenuItem,
             this.toolStripMenuItem12,
-            this.rightToLeftToolStripMenuItem});
+            this.rightToLeftToolStripMenuItem,
+            this.toolStripMenuItem13,
+            this.findInFilesToolStripMenuItem});
             this.toolsToolStripMenuItem.Name = "toolsToolStripMenuItem";
             this.toolsToolStripMenuItem.Size = new System.Drawing.Size(47, 20);
             this.toolsToolStripMenuItem.Text = "&Tools";
@@ -584,7 +589,7 @@ namespace TextEditor
             // 
             this.rightToLeftToolStripMenuItem.Name = "rightToLeftToolStripMenuItem";
             this.rightToLeftToolStripMenuItem.Size = new System.Drawing.Size(256, 22);
-            this.rightToLeftToolStripMenuItem.Text = "Right To Left Reading Order";
+            this.rightToLeftToolStripMenuItem.Text = "&Right To Left Reading Order";
             this.rightToLeftToolStripMenuItem.Click += new System.EventHandler(this.rightToLeftToolStripMenuItem_Click);
             // 
             // tableLayoutPanel1
@@ -698,8 +703,21 @@ namespace TextEditor
             this.helper.TrimTrailingSpaesToolStripMenuItem = this.trimTrailingSpacesToolStripMenuItem;
             this.helper.UndoToolStripMenuItem = this.undoToolStripMenuItem;
             // 
+            // toolStripMenuItem13
+            // 
+            this.toolStripMenuItem13.Name = "toolStripMenuItem13";
+            this.toolStripMenuItem13.Size = new System.Drawing.Size(253, 6);
+            // 
+            // findInFilesToolStripMenuItem
+            // 
+            this.findInFilesToolStripMenuItem.Name = "findInFilesToolStripMenuItem";
+            this.findInFilesToolStripMenuItem.Size = new System.Drawing.Size(256, 22);
+            this.findInFilesToolStripMenuItem.Text = "&Find in Files...";
+            this.findInFilesToolStripMenuItem.Click += new System.EventHandler(this.findInFilesToolStripMenuItem_Click);
+            // 
             // TextEditorWindow
             // 
+            this.AllowDrop = true;
             this.AutoScaleMode = System.Windows.Forms.AutoScaleMode.None;
             this.ClientSize = new System.Drawing.Size(633, 420);
             this.Controls.Add(this.tableLayoutPanel1);
@@ -793,5 +811,7 @@ namespace TextEditor
         private System.Windows.Forms.ToolStripSeparator toolStripMenuItem12;
         private System.Windows.Forms.ToolStripMenuItem rightToLeftToolStripMenuItem;
         private System.Windows.Forms.ToolStripMenuItem trimTrailingSpacesToolStripMenuItem;
+        private System.Windows.Forms.ToolStripSeparator toolStripMenuItem13;
+        private System.Windows.Forms.ToolStripMenuItem findInFilesToolStripMenuItem;
     }
 }

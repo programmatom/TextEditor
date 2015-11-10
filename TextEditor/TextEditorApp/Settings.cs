@@ -72,6 +72,24 @@ namespace TextEditor
         }
     }
 
+    public struct SearchPaths
+    {
+        public string[] paths;
+        public string last;
+
+        public SearchPaths(string[] paths, string last)
+        {
+            this.paths = paths;
+            this.last = last;
+        }
+
+        public SearchPaths(SearchPaths orig)
+        {
+            this.paths = orig.paths;
+            this.last = orig.last;
+        }
+    }
+
     public class EditorConfigList
     {
         private List<EditorConfig> configs = new List<EditorConfig>();
@@ -79,6 +97,7 @@ namespace TextEditor
         private int height;
         private BackingStore backingStore = BackingStore.String;
         private TextService textService = TextService.Simple;
+        private SearchPaths searchPaths = new SearchPaths();
 
         public EditorConfigList()
         {
@@ -97,24 +116,13 @@ namespace TextEditor
             this.height = original.height;
             this.backingStore = original.backingStore;
             this.textService = original.textService;
+            this.searchPaths = new SearchPaths(original.searchPaths);
 
             configs.Clear();
             foreach (EditorConfig origConfig in original.configs)
             {
                 configs.Add(new EditorConfig(origConfig));
             }
-        }
-
-        public EditorConfig GetConfig(string extension)
-        {
-            foreach (EditorConfig config in configs)
-            {
-                if (extension == config.Extension)
-                {
-                    return config;
-                }
-            }
-            return configs[0];
         }
 
         public int Width
@@ -165,6 +173,18 @@ namespace TextEditor
             }
         }
 
+        public SearchPaths SearchPaths
+        {
+            get
+            {
+                return searchPaths;
+            }
+            set
+            {
+                searchPaths = value;
+            }
+        }
+
         public int Count
         {
             get
@@ -203,19 +223,22 @@ namespace TextEditor
             }
             for (int i = 1; i < configs.Count; i++)
             {
-                string ext2 = configs[i].Extension;
-                if (ext2 == null)
+                foreach (string ext in configs[i].Extension.Split(';'))
                 {
-                    ext2 = String.Empty;
-                }
-                ext2 = ext2.Trim();
-                if (ext2.StartsWith("."))
-                {
-                    ext2 = ext2.Substring(1);
-                }
-                if (String.Equals(ext2, extension, StringComparison.OrdinalIgnoreCase))
-                {
-                    return configs[i];
+                    string ext2 = ext;
+                    if (ext2 == null)
+                    {
+                        ext2 = String.Empty;
+                    }
+                    ext2 = ext2.Trim();
+                    if (ext2.StartsWith("."))
+                    {
+                        ext2 = ext2.Substring(1);
+                    }
+                    if (String.Equals(ext2, extension, StringComparison.OrdinalIgnoreCase))
+                    {
+                        return configs[i];
+                    }
                 }
             }
             return configs[0];
@@ -238,6 +261,18 @@ namespace TextEditor
             catch (NullReferenceException)
             {
             }
+            List<string> searchPathStrings = new List<string>();
+            string searchPathLast = null;
+            foreach (XPathNavigator searchPath in xml.CreateNavigator().Select("/settings/searchPaths/searchPath"))
+            {
+                searchPathStrings.Add(searchPath.Value);
+                XPathNavigator last = searchPath.SelectSingleNode("@last");
+                if ((last != null) && last.ValueAsBoolean)
+                {
+                    searchPathLast = searchPath.Value;
+                }
+            }
+            searchPaths = new SearchPaths(searchPathStrings.ToArray(), searchPathLast);
 
             foreach (XPathNavigator nav in xml.CreateNavigator().Select("/settings/config"))
             {
@@ -286,6 +321,21 @@ namespace TextEditor
 
                     writer.WriteStartElement("textService");
                     writer.WriteValue(textService.ToString());
+                    writer.WriteEndElement();
+
+                    writer.WriteStartElement("searchPaths");
+                    foreach (string searchPath in searchPaths.paths)
+                    {
+                        writer.WriteStartElement("searchPath");
+                        if (String.Equals(searchPath, SearchPaths.last))
+                        {
+                            writer.WriteStartAttribute("last");
+                            writer.WriteValue(true);
+                            writer.WriteEndAttribute();
+                        }
+                        writer.WriteValue(searchPath);
+                        writer.WriteEndElement();
+                    }
                     writer.WriteEndElement();
 
                     foreach (EditorConfig config in configs)
