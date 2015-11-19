@@ -69,6 +69,39 @@ namespace TextEditor
                 pinLine.Dispose();
             }
 
+            private class DeviceContext : IDeviceContext
+            {
+                private readonly Graphics graphics;
+
+                public DeviceContext(Graphics graphics)
+                {
+                    this.graphics = graphics;
+                }
+
+                public IntPtr GetHdc()
+                {
+                    IntPtr hdc;
+                    using (GDIRegion gdiRgnClip = new GDIRegion(graphics.Clip.GetHrgn(graphics)))
+                    {
+                        hdc = graphics.GetHdc();
+
+                        // Graphics/GDI+ doesn't pass clip region through so we have to reset it explicitly
+                        GDI.SelectClipRgn(hdc, gdiRgnClip);
+                    }
+                    return hdc;
+                }
+
+                public void ReleaseHdc()
+                {
+                    graphics.ReleaseHdc();
+                }
+
+                public void Dispose()
+                {
+                    // not owned
+                }
+            }
+
             public void DrawText(
                 Graphics graphics,
                 Bitmap backing,
@@ -76,14 +109,17 @@ namespace TextEditor
                 Color foreColor,
                 Color backColor)
             {
-                TextRenderer.DrawText(
-                    graphics,
-                    pinLine.Ref,
-                    font,
-                    position,
-                    foreColor,
-                    backColor,
-                    textFormatFlags);
+                using (DeviceContext dc = new DeviceContext(graphics))
+                {
+                    TextRenderer.DrawText(
+                        dc,
+                        pinLine.Ref,
+                        font,
+                        position,
+                        foreColor,
+                        backColor,
+                        textFormatFlags);
+                }
             }
 
             public Region BuildRegion(

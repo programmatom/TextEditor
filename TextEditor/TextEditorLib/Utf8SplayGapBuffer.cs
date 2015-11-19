@@ -409,8 +409,8 @@ namespace TextEditor
             int precedingLineBreakStart = FindStartOfLineBreak(currentOffset - 1);
             int precedingLineBreakLength = currentOffset - precedingLineBreakStart;
             vector.ReplaceRange(precedingLineBreakStart, precedingLineBreakLength, defaultLineEnding);
-            skipList.LineLengthChanged(currentLine - 1, WindowsLF.Length - defaultLineEnding.Length);
-            currentOffset = currentOffset - WindowsLF.Length + defaultLineEnding.Length;
+            skipList.LineLengthChanged(currentLine - 1, defaultLineEnding.Length - precedingLineBreakLength);
+            currentOffset = currentOffset - precedingLineBreakLength + defaultLineEnding.Length;
 
             vector.InsertRange(currentOffset, buffer);
             vector.InsertRange(currentOffset + buffer.Length, WindowsLF);

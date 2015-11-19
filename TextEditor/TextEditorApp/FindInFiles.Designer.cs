@@ -46,8 +46,8 @@ namespace TextEditor
             this.tableLayoutPanel1 = new System.Windows.Forms.TableLayoutPanel();
             this.labelStatus = new TextEditor.MyLabel();
             this.buttonFind = new System.Windows.Forms.Button();
-            this.timerStatusUpdate = new System.Windows.Forms.Timer(this.components);
             this.buttonFileDialog = new System.Windows.Forms.Button();
+            this.timerStatusUpdate = new System.Windows.Forms.Timer(this.components);
             this.tableLayoutPanel2.SuspendLayout();
             ((System.ComponentModel.ISupportInitialize)(this.dataGridViewFindResults)).BeginInit();
             ((System.ComponentModel.ISupportInitialize)(this.findInFilesEntryBindingSource)).BeginInit();
@@ -249,12 +249,6 @@ namespace TextEditor
             this.buttonFind.UseVisualStyleBackColor = true;
             this.buttonFind.Click += new System.EventHandler(this.buttonFind_Click);
             // 
-            // timerStatusUpdate
-            // 
-            this.timerStatusUpdate.Enabled = true;
-            this.timerStatusUpdate.Interval = 250;
-            this.timerStatusUpdate.Tick += new System.EventHandler(this.timerStatusUpdate_Tick);
-            // 
             // buttonFileDialog
             // 
             this.buttonFileDialog.Anchor = System.Windows.Forms.AnchorStyles.Left;
@@ -268,6 +262,12 @@ namespace TextEditor
             this.buttonFileDialog.UseVisualStyleBackColor = true;
             this.buttonFileDialog.Click += new System.EventHandler(this.buttonFileDialog_Click);
             // 
+            // timerStatusUpdate
+            // 
+            this.timerStatusUpdate.Enabled = true;
+            this.timerStatusUpdate.Interval = 250;
+            this.timerStatusUpdate.Tick += new System.EventHandler(this.timerStatusUpdate_Tick);
+            // 
             // FindInFiles
             // 
             this.AcceptButton = this.buttonFind;
@@ -276,7 +276,7 @@ namespace TextEditor
             this.ClientSize = new System.Drawing.Size(867, 282);
             this.Controls.Add(this.tableLayoutPanel2);
             this.Name = "FindInFiles";
-            this.Text = "FindInFiles";
+            this.Text = "Find in Files";
             this.tableLayoutPanel2.ResumeLayout(false);
             this.tableLayoutPanel2.PerformLayout();
             ((System.ComponentModel.ISupportInitialize)(this.dataGridViewFindResults)).EndInit();

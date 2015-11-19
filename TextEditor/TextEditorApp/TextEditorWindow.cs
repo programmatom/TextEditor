@@ -69,6 +69,7 @@ namespace TextEditor
             textEditControl.TabSize = config.TabSize;
             textEditControl.AutoIndent = config.AutoIndent;
             textEditControl.InsertTabAsSpaces = config.InsertTabAsSpaces;
+            textEditControl.SimpleNavigation = config.SimpleNavigation;
 
             this.Text = "Untitled";
 
@@ -102,31 +103,17 @@ namespace TextEditor
                     Debug.Assert(false);
                     throw new ArgumentException();
                 case BackingStore.String:
-                BackingStore_String:
                     effectiveBackingStore = BackingStore.String;
                     factory = this.stringStorageFactory;
                     break;
                 case BackingStore.Protected:
-                BackingStore_Protected:
                     effectiveBackingStore = BackingStore.Protected;
                     factory = this.protectedStorageFactory;
                     break;
                 case BackingStore.Utf8SplayGapBuffer:
-                BackingStore_Utf8GapBufferSplay:
                     effectiveBackingStore = BackingStore.Utf8SplayGapBuffer;
                     factory = this.utf8SplayGapBufferFactory;
                     break;
-                case BackingStore.Random:
-                    switch (new Random().Next(3))
-                    {
-                        case 0:
-                            goto BackingStore_String;
-                        case 1:
-                            goto BackingStore_Protected;
-                        case 2:
-                            goto BackingStore_Utf8GapBufferSplay;
-                    }
-                    throw new InvalidOperationException();
             }
             return factory;
         }
@@ -175,6 +162,7 @@ namespace TextEditor
             textEditControl.TabSize = config.TabSize;
             textEditControl.AutoIndent = config.AutoIndent;
             textEditControl.InsertTabAsSpaces = config.InsertTabAsSpaces;
+            textEditControl.SimpleNavigation = config.SimpleNavigation;
 
             this.Text = Path.GetFileName(path);
 
@@ -279,7 +267,7 @@ namespace TextEditor
                 }
                 catch (ArgumentException)
                 {
-                    throw new Exception(String.Format("Buffer qualifier '{0}' is not recognized - should be one of '{1}', '{2}', or '{3}'", qualifier, BackingStore.String, BackingStore.Protected, BackingStore.Random));
+                    throw new Exception(String.Format("Buffer qualifier '{0}' is not recognized - should be one of '{1}', '{2}', or '{3}'", qualifier, BackingStore.String, BackingStore.Protected, BackingStore.Utf8SplayGapBuffer));
                 }
                 factory = GetBackingStore(effectiveBackingStore);
             }
@@ -584,6 +572,7 @@ namespace TextEditor
             autoIndentToolStripMenuItem.Checked = textEditControl.AutoIndent;
             tabSizeToolStripMenuItem.Text = String.Format("&Tab Size ({0})...", textEditControl.TabSize);
             insertTabAsSpacesToolStripMenuItem.Checked = textEditControl.InsertTabAsSpaces;
+            simpleNavigationToolStripMenuItem.Checked = textEditControl.SimpleNavigation;
             fontToolStripMenuItem.Text = String.Format("&Font ({0}, {1}{2})...", textEditControl.Font.FontFamily.Name, textEditControl.Font.Style != FontStyle.Regular ? textEditControl.Font.Style.ToString().ToLower() + " ," : null, textEditControl.Font.SizeInPoints);
             macintoshLinebreaksToolStripMenuItem.Checked = String.Equals(linefeed, "\r");
             uNIXLinebreaksToolStripMenuItem.Checked = String.Equals(linefeed, "\n");
@@ -642,6 +631,11 @@ namespace TextEditor
         private void insertTabAsSpacesToolStripMenuItem_Click(object sender, EventArgs e)
         {
             textEditControl.InsertTabAsSpaces = !textEditControl.InsertTabAsSpaces;
+        }
+
+        private void simpleNavigationToolStripMenuItem_Click(object sender, EventArgs e)
+        {
+            textEditControl.SimpleNavigation = !textEditControl.SimpleNavigation;
         }
 
         private void raw8bitToolStripMenuItem_Click(object sender, EventArgs e)

@@ -132,6 +132,19 @@ namespace TextEditor
         }
 
         [Browsable(false), DesignerSerializationVisibility(DesignerSerializationVisibility.Hidden)]
+        public bool SimpleNavigation
+        {
+            get
+            {
+                return checkBoxSimpleNavigation.Checked;
+            }
+            set
+            {
+                checkBoxSimpleNavigation.Checked = value;
+            }
+        }
+
+        [Browsable(false), DesignerSerializationVisibility(DesignerSerializationVisibility.Hidden)]
         public EditorConfig All
         {
             get
@@ -141,7 +154,8 @@ namespace TextEditor
                     this.FontConfig,
                     this.TabSize,
                     this.AutoIndent,
-                    this.InsertTabAsSpaces);
+                    this.InsertTabAsSpaces,
+                    this.SimpleNavigation);
             }
             set
             {
@@ -150,6 +164,7 @@ namespace TextEditor
                 this.TabSize = value.TabSize;
                 this.AutoIndent = value.AutoIndent;
                 this.InsertTabAsSpaces = value.InsertTabAsSpaces;
+                this.SimpleNavigation = value.SimpleNavigation;
             }
         }
 

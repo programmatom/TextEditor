@@ -280,7 +280,12 @@ namespace TextEditor
         {
             if (!IsDisposed)
             {
-                results.Add((FindInFilesEntry)e.UserState);
+                FindInFilesEntry[] entries = (FindInFilesEntry[])e.UserState;
+                for (int i = 0; i < entries.Length; i++)
+                {
+                    results.Add(entries[i]);
+                }
+                task.Release();
             }
         }
 
@@ -304,7 +309,8 @@ namespace TextEditor
 
         private void buttonFileDialog_Click(object sender, EventArgs e)
         {
-            // TODO: FolderBrowserDialog is crap, but you have to hack OpenFileDialog for something usable
+#if false
+            // FolderBrowserDialog is unusable crap.
             using (FolderBrowserDialog dialog = new FolderBrowserDialog())
             {
                 if (dialog.ShowDialog() == DialogResult.OK)
@@ -312,6 +318,22 @@ namespace TextEditor
                     comboBoxSearchPath.Text = dialog.SelectedPath;
                 }
             }
+#else
+            // HACK: based on what WinMerge does - usability is suspect but still much better than FolderBrowserDialog.
+            // See: http://www.codeproject.com/Articles/44914/Select-file-or-folder-from-the-same-dialog
+            using (OpenFileDialog dialog = new OpenFileDialog())
+            {
+                dialog.ValidateNames = false;
+                dialog.CheckFileExists = false;
+                dialog.CheckPathExists = false;
+                dialog.Title = "Select a Folder";
+                dialog.FileName = "Select Folder.";
+                if (dialog.ShowDialog() == DialogResult.OK)
+                {
+                    comboBoxSearchPath.Text = Path.GetDirectoryName(dialog.FileName);
+                }
+            }
+#endif
         }
     }
 
@@ -377,6 +399,10 @@ namespace TextEditor
         private readonly bool caseSensitive;
         private readonly bool matchWholeWords;
         private string currentPath;
+        private const int ChunkLength = 16;
+        private readonly List<FindInFilesEntry> results = new List<FindInFilesEntry>(ChunkLength);
+        private DateTime lastFlush;
+        private AutoResetEvent interlock;
 
         public FindInFilesTask(
             string pattern,
@@ -421,11 +447,33 @@ namespace TextEditor
 
         public string CurrentPath { get { return currentPath; } }
 
+        public void Release()
+        {
+            AutoResetEvent interlock = this.interlock;
+            if (interlock != null)
+            {
+                interlock.Set();
+            }
+        }
+
         protected override void OnDoWork(DoWorkEventArgs e)
         {
-            bool cancelled;
-            EnumerateRecursive(root, ".", out cancelled);
-            e.Cancel = cancelled;
+            bool cancelled = false;
+            try
+            {
+                this.interlock = new AutoResetEvent(false);
+
+                EnumerateRecursive(root, ".", out cancelled);
+            }
+            finally
+            {
+                Flush();
+                e.Cancel = cancelled;
+
+                AutoResetEvent interlock = this.interlock;
+                this.interlock = null;
+                interlock.Close();
+            }
         }
 
         private void EnumerateRecursive(string root, string relative, out bool cancelled)
@@ -515,7 +563,7 @@ namespace TextEditor
                                 }
                                 if ((i >= 0) && !skip)
                                 {
-                                    ReportProgress(0, new FindInFilesEntry(path, displayPath, line, lineNumber, i, i + pattern.Length));
+                                    SendResult(new FindInFilesEntry(path, displayPath, line, lineNumber, i, i + pattern.Length));
                                 }
                             } while (i >= 0);
                         }
@@ -524,7 +572,47 @@ namespace TextEditor
             }
             catch (Exception exception)
             {
-                ReportProgress(0, new FindInFilesEntry(path, displayPath, String.Format("Unable to open: {0}", exception.Message), 0, 0, 0));
+                SendResult(new FindInFilesEntry(path, displayPath, String.Format("Unable to open: {0}", exception.Message), 0, 0, 0));
+            }
+
+            if (lastFlush.AddMilliseconds(250) < DateTime.UtcNow)
+            {
+                Flush();
+            }
+        }
+
+        private void Flush()
+        {
+            if (results.Count > 0)
+            {
+                FindInFilesEntry[] entries = results.ToArray();
+                results.Clear();
+
+                ReportProgress(0, entries);
+
+                // Alas, BackgroundWorker is not quite the complete solution one was hoping for.
+                // It tends to swamp the message queue with events (since DataGridView for display is much
+                // slower than this is at finding items), causing the application to hang up. This
+                // event is used to interlock reporting of results so that search does not resume until
+                // the DataGridView has consumed all the changes just sent.
+                while (!CancellationPending)
+                {
+                    if (this.interlock.WaitOne(1000))
+                    {
+                        break;
+                    }
+                }
+
+                lastFlush = DateTime.UtcNow;
+            }
+        }
+
+        private void SendResult(FindInFilesEntry entry)
+        {
+            results.Add(entry);
+            if (results.Count >= ChunkLength)
+            {
+                Flush();
             }
         }
     }

@@ -31,7 +31,6 @@ namespace TextEditor
             this.tableLayoutPanel1 = new System.Windows.Forms.TableLayoutPanel();
             this.tabControlSettings = new System.Windows.Forms.TabControl();
             this.tabPage1 = new System.Windows.Forms.TabPage();
-            this.settingsPanel1 = new TextEditor.SettingsPanel();
             this.tableLayoutPanel2 = new System.Windows.Forms.TableLayoutPanel();
             this.flowLayoutPanel1 = new System.Windows.Forms.FlowLayoutPanel();
             this.buttonCancel = new System.Windows.Forms.Button();
@@ -44,6 +43,7 @@ namespace TextEditor
             this.label3 = new System.Windows.Forms.Label();
             this.label4 = new System.Windows.Forms.Label();
             this.comboBoxTextService = new System.Windows.Forms.ComboBox();
+            this.settingsPanel1 = new TextEditor.SettingsPanel();
             this.tableLayoutPanel1.SuspendLayout();
             this.tabControlSettings.SuspendLayout();
             this.tabPage1.SuspendLayout();
@@ -92,17 +92,6 @@ namespace TextEditor
             this.tabPage1.TabIndex = 0;
             this.tabPage1.Text = "Default";
             this.tabPage1.UseVisualStyleBackColor = true;
-            // 
-            // settingsPanel1
-            // 
-            this.settingsPanel1.AutoSize = true;
-            this.settingsPanel1.Dock = System.Windows.Forms.DockStyle.Fill;
-            this.settingsPanel1.Location = new System.Drawing.Point(3, 3);
-            this.settingsPanel1.MinimumSize = new System.Drawing.Size(248, 114);
-            this.settingsPanel1.Name = "settingsPanel1";
-            this.settingsPanel1.Padding = new System.Windows.Forms.Padding(0, 7, 0, 7);
-            this.settingsPanel1.Size = new System.Drawing.Size(626, 245);
-            this.settingsPanel1.TabIndex = 0;
             // 
             // tableLayoutPanel2
             // 
@@ -208,8 +197,7 @@ namespace TextEditor
             this.comboBoxBackingStore.Items.AddRange(new object[] {
             "String",
             "Protected",
-            "Utf8SplayGapBuffer",
-            "Random"});
+            "Utf8SplayGapBuffer"});
             this.comboBoxBackingStore.Location = new System.Drawing.Point(323, 3);
             this.comboBoxBackingStore.Name = "comboBoxBackingStore";
             this.comboBoxBackingStore.Size = new System.Drawing.Size(125, 21);
@@ -248,6 +236,17 @@ namespace TextEditor
             this.comboBoxTextService.Name = "comboBoxTextService";
             this.comboBoxTextService.Size = new System.Drawing.Size(125, 21);
             this.comboBoxTextService.TabIndex = 3;
+            // 
+            // settingsPanel1
+            // 
+            this.settingsPanel1.AutoSize = true;
+            this.settingsPanel1.Dock = System.Windows.Forms.DockStyle.Fill;
+            this.settingsPanel1.Location = new System.Drawing.Point(3, 3);
+            this.settingsPanel1.MinimumSize = new System.Drawing.Size(248, 114);
+            this.settingsPanel1.Name = "settingsPanel1";
+            this.settingsPanel1.Padding = new System.Windows.Forms.Padding(0, 7, 0, 7);
+            this.settingsPanel1.Size = new System.Drawing.Size(626, 245);
+            this.settingsPanel1.TabIndex = 0;
             // 
             // Settings
             // 

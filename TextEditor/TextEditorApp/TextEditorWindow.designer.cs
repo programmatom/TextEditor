@@ -82,6 +82,8 @@ namespace TextEditor
             this.autoIndentToolStripMenuItem = new System.Windows.Forms.ToolStripMenuItem();
             this.tabSizeToolStripMenuItem = new System.Windows.Forms.ToolStripMenuItem();
             this.insertTabAsSpacesToolStripMenuItem = new System.Windows.Forms.ToolStripMenuItem();
+            this.toolStripMenuItem14 = new System.Windows.Forms.ToolStripSeparator();
+            this.simpleNavigationToolStripMenuItem = new System.Windows.Forms.ToolStripMenuItem();
             this.toolStripMenuItem7 = new System.Windows.Forms.ToolStripSeparator();
             this.fontToolStripMenuItem = new System.Windows.Forms.ToolStripMenuItem();
             this.toolStripMenuItem6 = new System.Windows.Forms.ToolStripSeparator();
@@ -91,6 +93,8 @@ namespace TextEditor
             this.nextUTF16SurrogatePairToolStripMenuItem = new System.Windows.Forms.ToolStripMenuItem();
             this.toolStripMenuItem12 = new System.Windows.Forms.ToolStripSeparator();
             this.rightToLeftToolStripMenuItem = new System.Windows.Forms.ToolStripMenuItem();
+            this.toolStripMenuItem13 = new System.Windows.Forms.ToolStripSeparator();
+            this.findInFilesToolStripMenuItem = new System.Windows.Forms.ToolStripMenuItem();
             this.tableLayoutPanel1 = new System.Windows.Forms.TableLayoutPanel();
             this.toolStrip = new System.Windows.Forms.ToolStrip();
             this.toolStripLabelBackingStore = new System.Windows.Forms.ToolStripLabel();
@@ -105,8 +109,6 @@ namespace TextEditor
             this.helper = new TextEditor.TextEditorWindowHelper(this.components);
             this.protectedStorageFactory = new TextEditor.ProtectedStorageFactory();
             this.utf8SplayGapBufferFactory = new TextEditor.Utf8SplayGapStorageFactory();
-            this.toolStripMenuItem13 = new System.Windows.Forms.ToolStripSeparator();
-            this.findInFilesToolStripMenuItem = new System.Windows.Forms.ToolStripMenuItem();
             this.menuStrip.SuspendLayout();
             this.tableLayoutPanel1.SuspendLayout();
             this.toolStrip.SuspendLayout();
@@ -222,7 +224,7 @@ namespace TextEditor
             // 
             this.saveACopyAsToolStripMenuItem.Name = "saveACopyAsToolStripMenuItem";
             this.saveACopyAsToolStripMenuItem.Size = new System.Drawing.Size(182, 22);
-            this.saveACopyAsToolStripMenuItem.Text = "Save a &Copy As...";
+            this.saveACopyAsToolStripMenuItem.Text = "Sa&ve a Copy As...";
             this.saveACopyAsToolStripMenuItem.Click += new System.EventHandler(this.saveACopyAsToolStripMenuItem_Click);
             // 
             // toolStripMenuItem11
@@ -235,7 +237,7 @@ namespace TextEditor
             this.closeToolStripMenuItem.Name = "closeToolStripMenuItem";
             this.closeToolStripMenuItem.ShortcutKeys = ((System.Windows.Forms.Keys)((System.Windows.Forms.Keys.Alt | System.Windows.Forms.Keys.F4)));
             this.closeToolStripMenuItem.Size = new System.Drawing.Size(182, 22);
-            this.closeToolStripMenuItem.Text = "C&lose";
+            this.closeToolStripMenuItem.Text = "&Close";
             this.closeToolStripMenuItem.Click += new System.EventHandler(this.closeToolStripMenuItem_Click);
             // 
             // exitToolStripMenuItem
@@ -431,6 +433,8 @@ namespace TextEditor
             this.autoIndentToolStripMenuItem,
             this.tabSizeToolStripMenuItem,
             this.insertTabAsSpacesToolStripMenuItem,
+            this.toolStripMenuItem14,
+            this.simpleNavigationToolStripMenuItem,
             this.toolStripMenuItem7,
             this.fontToolStripMenuItem,
             this.toolStripMenuItem6,
@@ -527,6 +531,18 @@ namespace TextEditor
             this.insertTabAsSpacesToolStripMenuItem.Text = "&Insert Tab As Spaces";
             this.insertTabAsSpacesToolStripMenuItem.Click += new System.EventHandler(this.insertTabAsSpacesToolStripMenuItem_Click);
             // 
+            // toolStripMenuItem14
+            // 
+            this.toolStripMenuItem14.Name = "toolStripMenuItem14";
+            this.toolStripMenuItem14.Size = new System.Drawing.Size(199, 6);
+            // 
+            // simpleNavigationToolStripMenuItem
+            // 
+            this.simpleNavigationToolStripMenuItem.Name = "simpleNavigationToolStripMenuItem";
+            this.simpleNavigationToolStripMenuItem.Size = new System.Drawing.Size(202, 22);
+            this.simpleNavigationToolStripMenuItem.Text = "&Simple Navigation";
+            this.simpleNavigationToolStripMenuItem.Click += new System.EventHandler(this.simpleNavigationToolStripMenuItem_Click);
+            // 
             // toolStripMenuItem7
             // 
             this.toolStripMenuItem7.Name = "toolStripMenuItem7";
@@ -591,6 +607,18 @@ namespace TextEditor
             this.rightToLeftToolStripMenuItem.Size = new System.Drawing.Size(256, 22);
             this.rightToLeftToolStripMenuItem.Text = "&Right To Left Reading Order";
             this.rightToLeftToolStripMenuItem.Click += new System.EventHandler(this.rightToLeftToolStripMenuItem_Click);
+            // 
+            // toolStripMenuItem13
+            // 
+            this.toolStripMenuItem13.Name = "toolStripMenuItem13";
+            this.toolStripMenuItem13.Size = new System.Drawing.Size(253, 6);
+            // 
+            // findInFilesToolStripMenuItem
+            // 
+            this.findInFilesToolStripMenuItem.Name = "findInFilesToolStripMenuItem";
+            this.findInFilesToolStripMenuItem.Size = new System.Drawing.Size(256, 22);
+            this.findInFilesToolStripMenuItem.Text = "&Find in Files...";
+            this.findInFilesToolStripMenuItem.Click += new System.EventHandler(this.findInFilesToolStripMenuItem_Click);
             // 
             // tableLayoutPanel1
             // 
@@ -700,20 +728,8 @@ namespace TextEditor
             this.helper.ShiftLeftToolStripMenuItem = this.shiftLeftToolStripMenuItem;
             this.helper.ShiftRightToolStripMenuItem = this.shiftRightToolStripMenuItem;
             this.helper.TextEditControl = this.textEditControl;
-            this.helper.TrimTrailingSpaesToolStripMenuItem = this.trimTrailingSpacesToolStripMenuItem;
+            this.helper.TrimTrailingSpacesToolStripMenuItem = this.trimTrailingSpacesToolStripMenuItem;
             this.helper.UndoToolStripMenuItem = this.undoToolStripMenuItem;
-            // 
-            // toolStripMenuItem13
-            // 
-            this.toolStripMenuItem13.Name = "toolStripMenuItem13";
-            this.toolStripMenuItem13.Size = new System.Drawing.Size(253, 6);
-            // 
-            // findInFilesToolStripMenuItem
-            // 
-            this.findInFilesToolStripMenuItem.Name = "findInFilesToolStripMenuItem";
-            this.findInFilesToolStripMenuItem.Size = new System.Drawing.Size(256, 22);
-            this.findInFilesToolStripMenuItem.Text = "&Find in Files...";
-            this.findInFilesToolStripMenuItem.Click += new System.EventHandler(this.findInFilesToolStripMenuItem_Click);
             // 
             // TextEditorWindow
             // 
@@ -813,5 +829,7 @@ namespace TextEditor
         private System.Windows.Forms.ToolStripMenuItem trimTrailingSpacesToolStripMenuItem;
         private System.Windows.Forms.ToolStripSeparator toolStripMenuItem13;
         private System.Windows.Forms.ToolStripMenuItem findInFilesToolStripMenuItem;
+        private System.Windows.Forms.ToolStripSeparator toolStripMenuItem14;
+        private System.Windows.Forms.ToolStripMenuItem simpleNavigationToolStripMenuItem;
     }
 }

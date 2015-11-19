@@ -36,8 +36,6 @@ namespace TextEditor
         String,
         Protected,
         Utf8SplayGapBuffer,
-
-        Random,
     }
 
     public struct EditorConfig
@@ -47,19 +45,22 @@ namespace TextEditor
         public int TabSize;
         public bool AutoIndent;
         public bool InsertTabAsSpaces;
+        public bool SimpleNavigation;
 
         public EditorConfig(
             string extension,
             Font font,
             int tabSize,
             bool autoIndent,
-            bool insertTabAsSpaces)
+            bool insertTabAsSpaces,
+            bool simpleNavigation)
         {
             this.Extension = extension;
             this.Font = font;
             this.TabSize = tabSize;
             this.AutoIndent = autoIndent;
             this.InsertTabAsSpaces = insertTabAsSpaces;
+            this.SimpleNavigation = simpleNavigation;
         }
 
         public EditorConfig(EditorConfig original)
@@ -69,6 +70,7 @@ namespace TextEditor
             this.TabSize = original.TabSize;
             this.AutoIndent = original.AutoIndent;
             this.InsertTabAsSpaces = original.InsertTabAsSpaces;
+            this.SimpleNavigation = original.SimpleNavigation;
         }
     }
 
@@ -108,7 +110,8 @@ namespace TextEditor
                     Form.DefaultFont,
                     8,
                     false/*autoIndent*/,
-                    false/*insertTabAsSpaces*/));
+                    false/*insertTabAsSpaces*/,
+                    false/*simpleNavigation*/));
         }
 
         public EditorConfigList(EditorConfigList original)
@@ -311,7 +314,8 @@ namespace TextEditor
                     ReadFont(nav.SelectSingleNode("font")),
                     nav.SelectSingleNode("tabSize").ValueAsInt,
                     nav.SelectSingleNode("autoIndent").ValueAsBoolean,
-                    nav.SelectSingleNode("insertTabAsSpaces").ValueAsBoolean);
+                    nav.SelectSingleNode("insertTabAsSpaces").ValueAsBoolean,
+                    nav.SelectSingleNode("simpleNavigation").ValueAsBoolean);
                 if (String.IsNullOrEmpty(config.Extension) && !defaultWasSet)
                 {
                     config.Extension = null;
@@ -402,6 +406,10 @@ namespace TextEditor
                         writer.WriteEndElement();
 
                         writer.WriteStartElement("insertTabAsSpaces");
+                        writer.WriteValue(config.InsertTabAsSpaces);
+                        writer.WriteEndElement();
+
+                        writer.WriteStartElement("simpleNavigation");
                         writer.WriteValue(config.InsertTabAsSpaces);
                         writer.WriteEndElement();
 

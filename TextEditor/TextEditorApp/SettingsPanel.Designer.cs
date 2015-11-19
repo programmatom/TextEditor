@@ -41,6 +41,8 @@ namespace TextEditor
             this.buttonDelete = new System.Windows.Forms.Button();
             this.label5 = new System.Windows.Forms.Label();
             this.checkBoxInsertTabAsSpaces = new System.Windows.Forms.CheckBox();
+            this.label6 = new System.Windows.Forms.Label();
+            this.checkBoxSimpleNavigation = new System.Windows.Forms.CheckBox();
             this.tableLayoutPanel1.SuspendLayout();
             this.SuspendLayout();
             // 
@@ -59,21 +61,24 @@ namespace TextEditor
             this.tableLayoutPanel1.Controls.Add(this.checkBoxAutoIndent, 1, 4);
             this.tableLayoutPanel1.Controls.Add(this.label4, 0, 0);
             this.tableLayoutPanel1.Controls.Add(this.textBoxExtension, 1, 0);
-            this.tableLayoutPanel1.Controls.Add(this.buttonDelete, 1, 6);
+            this.tableLayoutPanel1.Controls.Add(this.buttonDelete, 1, 7);
             this.tableLayoutPanel1.Controls.Add(this.label5, 0, 5);
             this.tableLayoutPanel1.Controls.Add(this.checkBoxInsertTabAsSpaces, 1, 5);
+            this.tableLayoutPanel1.Controls.Add(this.label6, 0, 6);
+            this.tableLayoutPanel1.Controls.Add(this.checkBoxSimpleNavigation, 1, 6);
             this.tableLayoutPanel1.Dock = System.Windows.Forms.DockStyle.Top;
             this.tableLayoutPanel1.Location = new System.Drawing.Point(0, 7);
             this.tableLayoutPanel1.Name = "tableLayoutPanel1";
-            this.tableLayoutPanel1.RowCount = 7;
+            this.tableLayoutPanel1.RowCount = 8;
             this.tableLayoutPanel1.RowStyles.Add(new System.Windows.Forms.RowStyle());
             this.tableLayoutPanel1.RowStyles.Add(new System.Windows.Forms.RowStyle());
             this.tableLayoutPanel1.RowStyles.Add(new System.Windows.Forms.RowStyle());
             this.tableLayoutPanel1.RowStyles.Add(new System.Windows.Forms.RowStyle());
             this.tableLayoutPanel1.RowStyles.Add(new System.Windows.Forms.RowStyle());
             this.tableLayoutPanel1.RowStyles.Add(new System.Windows.Forms.RowStyle());
+            this.tableLayoutPanel1.RowStyles.Add(new System.Windows.Forms.RowStyle(System.Windows.Forms.SizeType.Absolute, 20F));
             this.tableLayoutPanel1.RowStyles.Add(new System.Windows.Forms.RowStyle());
-            this.tableLayoutPanel1.Size = new System.Drawing.Size(413, 163);
+            this.tableLayoutPanel1.Size = new System.Drawing.Size(413, 183);
             this.tableLayoutPanel1.TabIndex = 0;
             // 
             // label1
@@ -167,7 +172,7 @@ namespace TextEditor
             // buttonDelete
             // 
             this.buttonDelete.Anchor = System.Windows.Forms.AnchorStyles.Right;
-            this.buttonDelete.Location = new System.Drawing.Point(335, 137);
+            this.buttonDelete.Location = new System.Drawing.Point(335, 157);
             this.buttonDelete.Name = "buttonDelete";
             this.buttonDelete.Size = new System.Drawing.Size(75, 23);
             this.buttonDelete.TabIndex = 8;
@@ -195,16 +200,37 @@ namespace TextEditor
             this.checkBoxInsertTabAsSpaces.TabIndex = 10;
             this.checkBoxInsertTabAsSpaces.UseVisualStyleBackColor = true;
             // 
+            // label6
+            // 
+            this.label6.Anchor = ((System.Windows.Forms.AnchorStyles)((System.Windows.Forms.AnchorStyles.Left | System.Windows.Forms.AnchorStyles.Right)));
+            this.label6.AutoSize = true;
+            this.label6.Location = new System.Drawing.Point(3, 137);
+            this.label6.Name = "label6";
+            this.label6.Size = new System.Drawing.Size(114, 13);
+            this.label6.TabIndex = 11;
+            this.label6.Text = "Simple Navigation:";
+            // 
+            // checkBoxSimpleNavigation
+            // 
+            this.checkBoxSimpleNavigation.Anchor = ((System.Windows.Forms.AnchorStyles)((System.Windows.Forms.AnchorStyles.Left | System.Windows.Forms.AnchorStyles.Right)));
+            this.checkBoxSimpleNavigation.AutoSize = true;
+            this.checkBoxSimpleNavigation.Location = new System.Drawing.Point(123, 137);
+            this.checkBoxSimpleNavigation.Name = "checkBoxSimpleNavigation";
+            this.checkBoxSimpleNavigation.Size = new System.Drawing.Size(287, 14);
+            this.checkBoxSimpleNavigation.TabIndex = 12;
+            this.checkBoxSimpleNavigation.UseVisualStyleBackColor = true;
+            // 
             // SettingsPanel
             // 
             this.AutoScaleDimensions = new System.Drawing.SizeF(6F, 13F);
             this.AutoScaleMode = System.Windows.Forms.AutoScaleMode.Font;
+            this.AutoScroll = true;
             this.AutoSize = true;
             this.Controls.Add(this.tableLayoutPanel1);
             this.MinimumSize = new System.Drawing.Size(248, 114);
             this.Name = "SettingsPanel";
             this.Padding = new System.Windows.Forms.Padding(0, 7, 0, 7);
-            this.Size = new System.Drawing.Size(413, 180);
+            this.Size = new System.Drawing.Size(413, 197);
             this.tableLayoutPanel1.ResumeLayout(false);
             this.tableLayoutPanel1.PerformLayout();
             this.ResumeLayout(false);
@@ -227,5 +253,7 @@ namespace TextEditor
         private System.Windows.Forms.Button buttonDelete;
         private System.Windows.Forms.Label label5;
         private System.Windows.Forms.CheckBox checkBoxInsertTabAsSpaces;
+        private System.Windows.Forms.Label label6;
+        private System.Windows.Forms.CheckBox checkBoxSimpleNavigation;
     }
 }

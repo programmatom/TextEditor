@@ -54,6 +54,7 @@ namespace TextEditor
         private bool cursorEnabledFlag = true;
         private bool cursorDrawnFlag = true;
         //private bool cursorAdvancing = true; // TODO: for Uniscript, see https://msdn.microsoft.com/en-us/library/windows/desktop/dd317793%28v=vs.85%29.aspx
+        private bool simpleNavigation; // uses Char.IsLetterOrDigit and Char.IsWhiteSpace even for Uniscribe - good for source code editors
 
         private int clickPhase;
         private int lastClickX;
@@ -957,6 +958,9 @@ namespace TextEditor
         [Category("Appearance"), DefaultValue(typeof(Color), "ControlText")]
         public Color SelectedForeColorInactive { get { return selectedForeColorInactive; } set { selectedForeColorInactive = value; } }
 
+        [Category("Behavior"), DefaultValue(false)]
+        public bool SimpleNavigation { get { return simpleNavigation; } set { simpleNavigation = value; } }
+
         [Browsable(false), DesignerSerializationVisibility(DesignerSerializationVisibility.Hidden)] // TODO: expose this when services have stabilized
         [Category("Appearance"), DefaultValue(TextService.Simple)]
         public TextService TextService
@@ -1540,6 +1544,8 @@ namespace TextEditor
                     }
                 }
             }
+
+            Update();
         }
 
         public void ScrollToSelectionStartEdge()
@@ -1601,6 +1607,8 @@ namespace TextEditor
                         -AutoScrollPosition.Y);
                 }
             }
+
+            Update();
         }
 
         public void ScrollToSelectionEndEdge()
@@ -1662,6 +1670,20 @@ namespace TextEditor
                             - ClientWidth + (2 * check),
                         -AutoScrollPosition.Y);
                 }
+            }
+
+            Update();
+        }
+
+        public void ScrollToSelectionActiveEnd()
+        {
+            if (SelectionStartIsActive)
+            {
+                ScrollToSelectionStartEdge();
+            }
+            else
+            {
+                ScrollToSelectionEndEdge();
             }
         }
 
@@ -1896,6 +1918,8 @@ namespace TextEditor
                     cursorDrawnFlag = true;
                 }
             }
+
+            Update();
         }
 
         /* extend the selection using the current mouse-click state (single, double, triple) */
@@ -1913,7 +1937,9 @@ namespace TextEditor
                 {
                     using (IDecodedTextLine decodedLine = textStorage[start.Line].Decode_MustDispose())
                     {
-                        using (ITextInfo info = textService.AnalyzeText(graphics, Font, decodedLine.Value))
+                        using (ITextInfo info = !simpleNavigation
+                            ? textService.AnalyzeText(graphics, Font, decodedLine.Value)
+                            : new TextServiceSimple().AnalyzeText(graphics, Font, decodedLine.Value))
                         {
                             int previous;
                             info.PreviousWordBoundary(start.Column, out previous);
@@ -1925,7 +1951,9 @@ namespace TextEditor
                 {
                     using (IDecodedTextLine decodedLine = textStorage[end.Line].Decode_MustDispose())
                     {
-                        using (ITextInfo info = textService.AnalyzeText(graphics, Font, decodedLine.Value))
+                        using (ITextInfo info = !simpleNavigation
+                            ? textService.AnalyzeText(graphics, Font, decodedLine.Value)
+                            : new TextServiceSimple().AnalyzeText(graphics, Font, decodedLine.Value))
                         {
                             int next;
                             info.NextWordBoundary(end.Column, out next);
@@ -2084,7 +2112,9 @@ namespace TextEditor
                                         }
                                         else if ((e.KeyData & Keys.Control) != 0)
                                         {
-                                            using (ITextInfo info = textService.AnalyzeText(graphics, Font, decodedLine.Value))
+                                            using (ITextInfo info = !simpleNavigation
+                                                ? textService.AnalyzeText(graphics, Font, decodedLine.Value)
+                                                : new TextServiceSimple().AnalyzeText(graphics, Font, decodedLine.Value))
                                             {
                                                 int previous;
                                                 info.PreviousWordBoundary(index, out previous);
@@ -2093,7 +2123,9 @@ namespace TextEditor
                                         }
                                         else
                                         {
-                                            using (ITextInfo info = textService.AnalyzeText(graphics, Font, decodedLine.Value))
+                                            using (ITextInfo info = !simpleNavigation
+                                                ? textService.AnalyzeText(graphics, Font, decodedLine.Value)
+                                                : new TextServiceSimple().AnalyzeText(graphics, Font, decodedLine.Value))
                                             {
                                                 int previous;
                                                 info.PreviousCharBoundary(index, out previous);
@@ -2113,7 +2145,7 @@ namespace TextEditor
                             }
                             MoveExtend(lineIndex, index, extend);
                         }
-                        ScrollToSelectionStartEdge();
+                        ScrollToSelectionActiveEnd();
                         e.Handled = true;
                         break;
 
@@ -2149,7 +2181,9 @@ namespace TextEditor
                                         }
                                         else if ((e.KeyData & Keys.Control) != 0)
                                         {
-                                            using (ITextInfo info = textService.AnalyzeText(graphics, Font, decodedLine.Value))
+                                            using (ITextInfo info = !simpleNavigation
+                                                ? textService.AnalyzeText(graphics, Font, decodedLine.Value)
+                                                : new TextServiceSimple().AnalyzeText(graphics, Font, decodedLine.Value))
                                             {
                                                 int next;
                                                 info.NextWordBoundary(index, out next);
@@ -2158,7 +2192,9 @@ namespace TextEditor
                                         }
                                         else
                                         {
-                                            using (ITextInfo info = textService.AnalyzeText(graphics, Font, decodedLine.Value))
+                                            using (ITextInfo info = !simpleNavigation
+                                                ? textService.AnalyzeText(graphics, Font, decodedLine.Value)
+                                                : new TextServiceSimple().AnalyzeText(graphics, Font, decodedLine.Value))
                                             {
                                                 int next;
                                                 info.NextCharBoundary(index, out next);
@@ -2178,7 +2214,7 @@ namespace TextEditor
                             }
                             MoveExtend(lineIndex, index, extend);
                         }
-                        ScrollToSelectionEndEdge();
+                        ScrollToSelectionActiveEnd();
                         e.Handled = true;
                         break;
 
@@ -2202,7 +2238,7 @@ namespace TextEditor
                                         ? selectStartChar
                                         : selectEndCharPlusOne));
                             MoveExtend(newPosition, newPoint, extend);
-                            ScrollToSelectionStartEdge();
+                            ScrollToSelectionActiveEnd();
                         }
                         e.Handled = true;
                         break;
@@ -2227,7 +2263,7 @@ namespace TextEditor
                                         ? selectStartChar
                                         : selectEndCharPlusOne));
                             MoveExtend(newPosition, newPoint, extend);
-                            ScrollToSelectionEndEdge();
+                            ScrollToSelectionActiveEnd();
                         }
                         e.Handled = true;
                         break;
@@ -2238,7 +2274,7 @@ namespace TextEditor
                         if (code == (Keys.Home | Keys.Control))
                         {
                             MoveExtend(0, 0, extend);
-                            ScrollToSelectionStartEdge();
+                            ScrollToSelectionActiveEnd();
                         }
                         else
                         {
@@ -2272,7 +2308,7 @@ namespace TextEditor
                                     selectStartIsActive ? selectEndCharPlusOne : newPoint,
                                     selectStartIsActive);
                             }
-                            ScrollToSelectionStartEdge();
+                            ScrollToSelectionActiveEnd();
                         }
                         e.Handled = true;
                         break;
@@ -2283,7 +2319,7 @@ namespace TextEditor
                         if (code == (Keys.End | Keys.Control))
                         {
                             MoveExtend(textStorage.Count - 1, textStorage[textStorage.Count - 1].Length, extend);
-                            ScrollToSelectionEndEdge();
+                            ScrollToSelectionActiveEnd();
                         }
                         else
                         {
@@ -2319,7 +2355,7 @@ namespace TextEditor
                                     selectStartIsActive ? selectEndCharPlusOne : newPoint,
                                     selectStartIsActive);
                             }
-                            ScrollToSelectionEndEdge();
+                            ScrollToSelectionActiveEnd();
                         }
                         e.Handled = true;
                         break;

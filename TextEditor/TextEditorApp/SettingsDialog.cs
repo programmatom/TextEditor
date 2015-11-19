@@ -55,9 +55,6 @@ namespace TextEditor
                 case BackingStore.Utf8SplayGapBuffer:
                     comboBoxBackingStore.SelectedItem = "Utf8SplayGapBuffer";
                     break;
-                case BackingStore.Random:
-                    comboBoxBackingStore.SelectedItem = "Random";
-                    break;
             }
 
             switch (config.TextService)
@@ -116,9 +113,6 @@ namespace TextEditor
                         break;
                     case "Utf8SplayGapBuffer":
                         config.BackingStore = BackingStore.Utf8SplayGapBuffer;
-                        break;
-                    case "Random":
-                        config.BackingStore = BackingStore.Random;
                         break;
                 }
 

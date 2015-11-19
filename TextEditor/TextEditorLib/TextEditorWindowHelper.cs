@@ -263,7 +263,7 @@ namespace TextEditor
         }
 
         [Browsable(true), Category("Menu Items")]
-        public ToolStripMenuItem TrimTrailingSpaesToolStripMenuItem
+        public ToolStripMenuItem TrimTrailingSpacesToolStripMenuItem
         {
             get { return trimTrailingSpacesToolStripMenuItem; }
             set
