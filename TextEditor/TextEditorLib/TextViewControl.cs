@@ -53,6 +53,7 @@ namespace TextEditor
 
         private bool cursorEnabledFlag = true;
         private bool cursorDrawnFlag = true;
+        private int stickyX;
         //private bool cursorAdvancing = true; // TODO: for Uniscript, see https://msdn.microsoft.com/en-us/library/windows/desktop/dd317793%28v=vs.85%29.aspx
         private bool simpleNavigation; // uses Char.IsLetterOrDigit and Char.IsWhiteSpace even for Uniscribe - good for source code editors
 
@@ -185,7 +186,7 @@ namespace TextEditor
         {
             base.OnSizeChanged(e);
 
-            DisposeGraphicsObjects(); // recreate offscreen strip
+            DisposeGraphicsObjects(); // force recreate offscreen strip
             textService.Reset(Font, ClientWidth);
 
             //Invalidate();
@@ -240,6 +241,7 @@ namespace TextEditor
 
             VerticalScroll.SmallChange = fontHeight;
             RecomputeCanvasSize();
+            SetStickyX();
             Invalidate();
         }
 
@@ -284,7 +286,7 @@ namespace TextEditor
             }
             if (offscreenStrip == null)
             {
-                offscreenStrip = new Bitmap(ClientWidth, fontHeight, System.Drawing.Imaging.PixelFormat.Format32bppRgb);
+                offscreenStrip = new Bitmap(Math.Max(ClientWidth, 1), fontHeight, System.Drawing.Imaging.PixelFormat.Format32bppRgb);
             }
         }
 
@@ -927,6 +929,20 @@ namespace TextEditor
             }
         }
 
+        public void SetStickyX()
+        {
+            if (textStorage != null)
+            {
+                using (Graphics graphics = CreateGraphics())
+                {
+                    stickyX = ScreenXFromCharIndex(
+                        graphics,
+                        selectStartIsActive ? selectStartLine : selectEndLine,
+                        selectStartIsActive ? selectStartChar : selectEndCharPlusOne);
+                }
+            }
+        }
+
 
         // misc
 
@@ -939,6 +955,7 @@ namespace TextEditor
             ValidateHardened();
 
             this.textStorage = factory.Take(storage);
+            stickyX = 0;
             SetInsertionPoint(0, 0);
             RecomputeCanvasSize();
         }
@@ -1041,6 +1058,7 @@ namespace TextEditor
                 if (changed)
                 {
                     RecomputeCanvasSize();
+                    SetStickyX();
                     Redraw();
                 }
             }
@@ -1353,6 +1371,7 @@ namespace TextEditor
                 startChar,
                 endLine,
                 endCharPlusOne);
+            SetStickyX();
 
             OnSelectionChanged();
         }
@@ -1393,6 +1412,7 @@ namespace TextEditor
                 endLine,
                 endCharPlusOne);
             this.selectStartIsActive = selectStartIsActive;
+            SetStickyX();
 
             OnSelectionChanged();
         }
@@ -1445,6 +1465,7 @@ namespace TextEditor
             {
                 RedrawLine(selectEndLine);
             }
+            SetStickyX();
 
             OnSelectionChanged();
         }
@@ -2000,6 +2021,8 @@ namespace TextEditor
 
             timerCursorBlink.Start();
 
+            // TODO: one last call to MoveMouseCapture()?
+
             MouseMoveCapture = null;
             if (cursorEnabledFlag && !SelectionNonEmpty)
             {
@@ -2145,6 +2168,7 @@ namespace TextEditor
                             }
                             MoveExtend(lineIndex, index, extend);
                         }
+                        SetStickyX();
                         ScrollToSelectionActiveEnd();
                         e.Handled = true;
                         break;
@@ -2214,6 +2238,7 @@ namespace TextEditor
                             }
                             MoveExtend(lineIndex, index, extend);
                         }
+                        SetStickyX();
                         ScrollToSelectionActiveEnd();
                         e.Handled = true;
                         break;
@@ -2226,6 +2251,7 @@ namespace TextEditor
                             {
                                 newPosition = 0;
                             }
+#if false
                             int newPoint = CharIndexFromScreenX(
                                 graphics,
                                 newPosition, /* previous line */
@@ -2237,7 +2263,17 @@ namespace TextEditor
                                     selectStartIsActive
                                         ? selectStartChar
                                         : selectEndCharPlusOne));
+#else
+                            int savedStickyX = stickyX;
+                            int newPoint = CharIndexFromScreenX(
+                                graphics,
+                                newPosition,
+                                stickyX);
+#endif
                             MoveExtend(newPosition, newPoint, extend);
+#if true
+                            stickyX = savedStickyX;
+#endif
                             ScrollToSelectionActiveEnd();
                         }
                         e.Handled = true;
@@ -2251,6 +2287,7 @@ namespace TextEditor
                             {
                                 newPosition = textStorage.Count - 1;
                             }
+#if false
                             int newPoint = CharIndexFromScreenX(
                                 graphics,
                                 newPosition, /* next line */
@@ -2262,7 +2299,17 @@ namespace TextEditor
                                     selectStartIsActive
                                         ? selectStartChar
                                         : selectEndCharPlusOne));
+#else
+                            int savedStickyX = stickyX;
+                            int newPoint = CharIndexFromScreenX(
+                                graphics,
+                                newPosition,
+                                stickyX);
+#endif
                             MoveExtend(newPosition, newPoint, extend);
+#if true
+                            stickyX = savedStickyX;
+#endif
                             ScrollToSelectionActiveEnd();
                         }
                         e.Handled = true;
@@ -2284,6 +2331,7 @@ namespace TextEditor
                                 newLineIndex = 0;
                             }
                             /* snap it to the closest point on the next line */
+#if false
                             int newPoint = CharIndexFromScreenX(
                                 graphics,
                                 newLineIndex, /* previous line */
@@ -2295,6 +2343,13 @@ namespace TextEditor
                                     selectStartIsActive
                                         ? selectStartChar
                                         : selectEndCharPlusOne));
+#else
+                            int savedStickyX = stickyX;
+                            int newPoint = CharIndexFromScreenX(
+                                graphics,
+                                newLineIndex,
+                                stickyX);
+#endif
                             if (!extend)
                             {
                                 SetInsertionPoint(newLineIndex, newPoint);
@@ -2308,6 +2363,9 @@ namespace TextEditor
                                     selectStartIsActive ? selectEndCharPlusOne : newPoint,
                                     selectStartIsActive);
                             }
+#if true
+                            stickyX = savedStickyX;
+#endif
                             ScrollToSelectionActiveEnd();
                         }
                         e.Handled = true;
@@ -2331,6 +2389,7 @@ namespace TextEditor
                                 newLineIndex = textStorage.Count - 1;
                             }
                             /* snap it to the closest point on the next line */
+#if false
                             int newPoint = CharIndexFromScreenX(
                                 graphics,
                                 newLineIndex, /* next line */
@@ -2342,6 +2401,13 @@ namespace TextEditor
                                     selectStartIsActive
                                         ? selectStartChar
                                         : selectEndCharPlusOne));
+#else
+                            int savedStickyX = stickyX;
+                            int newPoint = CharIndexFromScreenX(
+                                graphics,
+                                newLineIndex,
+                                stickyX);
+#endif
                             if (!extend)
                             {
                                 SetInsertionPoint(newLineIndex, newPoint);
@@ -2355,6 +2421,9 @@ namespace TextEditor
                                     selectStartIsActive ? selectEndCharPlusOne : newPoint,
                                     selectStartIsActive);
                             }
+#if true
+                            stickyX = savedStickyX;
+#endif
                             ScrollToSelectionActiveEnd();
                         }
                         e.Handled = true;

@@ -33,6 +33,7 @@ namespace TextEditor
         public UnsavedDialog(string file)
         {
             InitializeComponent();
+            this.Icon = TextEditorApp.Properties.Resources.Icon2;
 
             labelPrompt.Text = String.Format(labelPrompt.Text, file);
         }

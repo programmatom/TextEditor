@@ -40,6 +40,7 @@ namespace TextEditor
             this.config = new EditorConfigList(configArg);
 
             InitializeComponent();
+            this.Icon = TextEditorApp.Properties.Resources.Icon2;
 
             switch (config.BackingStore)
             {

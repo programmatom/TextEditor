@@ -40,6 +40,8 @@ namespace TextEditor
         private int lastFindLine;
         private int lastFindCharPlusOne;
 
+        private bool delegatedMode; // false: fire events using MenuItem.Click() event; true: caller invokes via ProcessMenuItemDelegate(MenuItem)
+
         private ToolStripMenuItem undoToolStripMenuItem;
         private ToolStripMenuItem redoToolStripMenuItem;
         private ToolStripMenuItem cutToolStripMenuItem;
@@ -95,7 +97,7 @@ namespace TextEditor
 
                 undoToolStripMenuItem = value;
 
-                if (undoToolStripMenuItem != null)
+                if ((undoToolStripMenuItem != null) && !delegatedMode)
                 {
                     undoToolStripMenuItem.Click += new EventHandler(undoToolStripMenuItem_Click);
                 }
@@ -115,7 +117,7 @@ namespace TextEditor
 
                 redoToolStripMenuItem = value;
 
-                if (redoToolStripMenuItem != null)
+                if ((redoToolStripMenuItem != null) && !delegatedMode)
                 {
                     redoToolStripMenuItem.Click += new EventHandler(redoToolStripMenuItem_Click);
                 }
@@ -135,7 +137,7 @@ namespace TextEditor
 
                 cutToolStripMenuItem = value;
 
-                if (cutToolStripMenuItem != null)
+                if ((cutToolStripMenuItem != null) && !delegatedMode)
                 {
                     cutToolStripMenuItem.Click += new EventHandler(cutToolStripMenuItem_Click);
                 }
@@ -155,7 +157,7 @@ namespace TextEditor
 
                 copyToolStripMenuItem = value;
 
-                if (copyToolStripMenuItem != null)
+                if ((copyToolStripMenuItem != null) && !delegatedMode)
                 {
                     copyToolStripMenuItem.Click += new EventHandler(copyToolStripMenuItem_Click);
                 }
@@ -175,7 +177,7 @@ namespace TextEditor
 
                 pasteToolStripMenuItem = value;
 
-                if (pasteToolStripMenuItem != null)
+                if ((pasteToolStripMenuItem != null) && !delegatedMode)
                 {
                     pasteToolStripMenuItem.Click += new EventHandler(pasteToolStripMenuItem_Click);
                 }
@@ -195,7 +197,7 @@ namespace TextEditor
 
                 clearToolStripMenuItem = value;
 
-                if (clearToolStripMenuItem != null)
+                if ((clearToolStripMenuItem != null) && !delegatedMode)
                 {
                     clearToolStripMenuItem.Click += new EventHandler(clearToolStripMenuItem_Click);
                 }
@@ -215,7 +217,7 @@ namespace TextEditor
 
                 selectAllToolStripMenuItem = value;
 
-                if (selectAllToolStripMenuItem != null)
+                if ((selectAllToolStripMenuItem != null) && !delegatedMode)
                 {
                     selectAllToolStripMenuItem.Click += new EventHandler(selectAllToolStripMenuItem_Click);
                 }
@@ -235,7 +237,7 @@ namespace TextEditor
 
                 shiftLeftToolStripMenuItem = value;
 
-                if (shiftLeftToolStripMenuItem != null)
+                if ((shiftLeftToolStripMenuItem != null) && !delegatedMode)
                 {
                     shiftLeftToolStripMenuItem.Click += new EventHandler(shiftLeftToolStripMenuItem_Click);
                 }
@@ -255,7 +257,7 @@ namespace TextEditor
 
                 shiftRightToolStripMenuItem = value;
 
-                if (shiftRightToolStripMenuItem != null)
+                if ((shiftRightToolStripMenuItem != null) && !delegatedMode)
                 {
                     shiftRightToolStripMenuItem.Click += new EventHandler(shiftRightToolStripMenuItem_Click);
                 }
@@ -275,7 +277,7 @@ namespace TextEditor
 
                 trimTrailingSpacesToolStripMenuItem = value;
 
-                if (trimTrailingSpacesToolStripMenuItem != null)
+                if ((trimTrailingSpacesToolStripMenuItem != null) && !delegatedMode)
                 {
                     trimTrailingSpacesToolStripMenuItem.Click += new EventHandler(trimTrailingSpacesToolStripMenuItem_Click);
                 }
@@ -295,7 +297,7 @@ namespace TextEditor
 
                 balanceToolStripMenuItem = value;
 
-                if (balanceToolStripMenuItem != null)
+                if ((balanceToolStripMenuItem != null) && !delegatedMode)
                 {
                     balanceToolStripMenuItem.Click += new EventHandler(balanceToolStripMenuItem_Click);
                 }
@@ -315,7 +317,7 @@ namespace TextEditor
 
                 convertTabsToSpacesToolStripMenuItem = value;
 
-                if (convertTabsToSpacesToolStripMenuItem != null)
+                if ((convertTabsToSpacesToolStripMenuItem != null) && !delegatedMode)
                 {
                     convertTabsToSpacesToolStripMenuItem.Click += new EventHandler(convertTabsToSpacesToolStripMenuItem_Click);
                 }
@@ -335,7 +337,7 @@ namespace TextEditor
 
                 findToolStripMenuItem = value;
 
-                if (findToolStripMenuItem != null)
+                if ((findToolStripMenuItem != null) && !delegatedMode)
                 {
                     findToolStripMenuItem.Click += new EventHandler(findToolStripMenuItem_Click);
                 }
@@ -355,7 +357,7 @@ namespace TextEditor
 
                 findAgainToolStripMenuItem = value;
 
-                if (findAgainToolStripMenuItem != null)
+                if ((findAgainToolStripMenuItem != null) && !delegatedMode)
                 {
                     findAgainToolStripMenuItem.Click += new EventHandler(findAgainToolStripMenuItem_Click);
                 }
@@ -375,7 +377,7 @@ namespace TextEditor
 
                 replaceAndFindAgainToolStripMenuItem = value;
 
-                if (replaceAndFindAgainToolStripMenuItem != null)
+                if ((replaceAndFindAgainToolStripMenuItem != null) && !delegatedMode)
                 {
                     replaceAndFindAgainToolStripMenuItem.Click += new EventHandler(replaceAndFindAgainToolStripMenuItem_Click);
                 }
@@ -395,7 +397,7 @@ namespace TextEditor
 
                 enterSelectionToolStripMenuItem = value;
 
-                if (enterSelectionToolStripMenuItem != null)
+                if ((enterSelectionToolStripMenuItem != null) && !delegatedMode)
                 {
                     enterSelectionToolStripMenuItem.Click += new EventHandler(enterSelectionToolStripMenuItem_Click);
                 }
@@ -415,7 +417,7 @@ namespace TextEditor
 
                 goToLineToolStripMenuItem = value;
 
-                if (goToLineToolStripMenuItem != null)
+                if ((goToLineToolStripMenuItem != null) && !delegatedMode)
                 {
                     goToLineToolStripMenuItem.Click += new EventHandler(goToLineToolStripMenuItem_Click);
                 }
@@ -436,15 +438,28 @@ namespace TextEditor
             }
         }
 
+        [Browsable(true), Category("Behavior"), DefaultValue(false)]
+        public bool DelegatedMode
+        {
+            get
+            {
+                return delegatedMode;
+            }
+            set
+            {
+                delegatedMode = value;
+            }
+        }
+
         private bool Enable
         {
             get
             {
-                return respectFocus ? textEditControl.Focused : true;
+                return !respectFocus || textEditControl.Focused;
             }
         }
 
-        public void MenuActivateDelegate()
+        public bool MenuActivateDelegate()
         {
             if ((undoToolStripMenuItem != null) && Enable)
             {
@@ -516,6 +531,7 @@ namespace TextEditor
             {
                 goToLineToolStripMenuItem.Enabled = true;
             }
+            return Enable;
         }
 
         public bool ProcessCmdKeyDelegate(ref Message msg, Keys keyData)
@@ -538,6 +554,96 @@ namespace TextEditor
             modifierKeys = 0;
 
             return result;
+        }
+
+        public bool ProcessMenuItemDelegate(ToolStripMenuItem menuItem)
+        {
+            if (menuItem == undoToolStripMenuItem)
+            {
+                undoToolStripMenuItem_Click(this, EventArgs.Empty);
+                return true;
+            }
+            else if (menuItem == redoToolStripMenuItem)
+            {
+                redoToolStripMenuItem_Click(this, EventArgs.Empty);
+                return true;
+            }
+            else if (menuItem == cutToolStripMenuItem)
+            {
+                cutToolStripMenuItem_Click(this, EventArgs.Empty);
+                return true;
+            }
+            else if (menuItem == copyToolStripMenuItem)
+            {
+                copyToolStripMenuItem_Click(this, EventArgs.Empty);
+                return true;
+            }
+            else if (menuItem == pasteToolStripMenuItem)
+            {
+                pasteToolStripMenuItem_Click(this, EventArgs.Empty);
+                return true;
+            }
+            else if (menuItem == clearToolStripMenuItem)
+            {
+                clearToolStripMenuItem_Click(this, EventArgs.Empty);
+                return true;
+            }
+            else if (menuItem == selectAllToolStripMenuItem)
+            {
+                selectAllToolStripMenuItem_Click(this, EventArgs.Empty);
+                return true;
+            }
+            else if (menuItem == shiftLeftToolStripMenuItem)
+            {
+                shiftLeftToolStripMenuItem_Click(this, EventArgs.Empty);
+                return true;
+            }
+            else if (menuItem == shiftRightToolStripMenuItem)
+            {
+                shiftRightToolStripMenuItem_Click(this, EventArgs.Empty);
+                return true;
+            }
+            else if (menuItem == trimTrailingSpacesToolStripMenuItem)
+            {
+                trimTrailingSpacesToolStripMenuItem_Click(this, EventArgs.Empty);
+                return true;
+            }
+            else if (menuItem == balanceToolStripMenuItem)
+            {
+                balanceToolStripMenuItem_Click(this, EventArgs.Empty);
+                return true;
+            }
+            else if (menuItem == convertTabsToSpacesToolStripMenuItem)
+            {
+                convertTabsToSpacesToolStripMenuItem_Click(this, EventArgs.Empty);
+                return true;
+            }
+            else if (menuItem == findToolStripMenuItem)
+            {
+                findToolStripMenuItem_Click(this, EventArgs.Empty);
+                return true;
+            }
+            else if (menuItem == findAgainToolStripMenuItem)
+            {
+                findAgainToolStripMenuItem_Click(this, EventArgs.Empty);
+                return true;
+            }
+            else if (menuItem == replaceAndFindAgainToolStripMenuItem)
+            {
+                replaceAndFindAgainToolStripMenuItem_Click(this, EventArgs.Empty);
+                return true;
+            }
+            else if (menuItem == enterSelectionToolStripMenuItem)
+            {
+                enterSelectionToolStripMenuItem_Click(this, EventArgs.Empty);
+                return true;
+            }
+            else if (menuItem == goToLineToolStripMenuItem)
+            {
+                goToLineToolStripMenuItem_Click(this, EventArgs.Empty);
+                return true;
+            }
+            return false;
         }
 
         private void undoToolStripMenuItem_Click(object sender, EventArgs e)

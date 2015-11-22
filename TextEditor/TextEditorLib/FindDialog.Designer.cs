@@ -245,6 +245,7 @@ namespace TextEditor
             this.MaximizeBox = false;
             this.MinimizeBox = false;
             this.Name = "FindDialog";
+            this.ShowIcon = false;
             this.Text = "FindDialog";
             this.tableLayoutPanel1.ResumeLayout(false);
             this.tableLayoutPanel1.PerformLayout();

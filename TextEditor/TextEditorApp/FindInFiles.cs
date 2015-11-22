@@ -50,6 +50,7 @@ namespace TextEditor
         public FindInFiles()
         {
             InitializeComponent();
+            this.Icon = TextEditorApp.Properties.Resources.Icon2;
 
             SetUpComboBox(
                 ref pathCounter,

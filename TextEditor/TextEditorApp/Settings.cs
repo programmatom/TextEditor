@@ -410,7 +410,7 @@ namespace TextEditor
                         writer.WriteEndElement();
 
                         writer.WriteStartElement("simpleNavigation");
-                        writer.WriteValue(config.InsertTabAsSpaces);
+                        writer.WriteValue(config.SimpleNavigation);
                         writer.WriteEndElement();
 
                         writer.WriteEndElement();

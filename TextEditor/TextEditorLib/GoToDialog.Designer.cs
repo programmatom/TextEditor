@@ -135,6 +135,7 @@ namespace TextEditor
             this.MaximizeBox = false;
             this.MinimizeBox = false;
             this.Name = "GoToDialog";
+            this.ShowIcon = false;
             this.StartPosition = System.Windows.Forms.FormStartPosition.CenterScreen;
             this.Text = "Go To Line";
             this.tableLayoutPanel1.ResumeLayout(false);

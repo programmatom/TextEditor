@@ -58,6 +58,7 @@ namespace TextEditor
             EditorConfig config = MainClass.Config[0];
 
             InitializeComponent();
+            this.Icon = TextEditorApp.Properties.Resources.Icon2;
 
             if (createBackingStore)
             {

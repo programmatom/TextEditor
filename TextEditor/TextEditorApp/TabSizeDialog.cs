@@ -37,6 +37,7 @@ namespace TextEditor
             this.originalValue = value;
 
             InitializeComponent();
+            this.Icon = TextEditorApp.Properties.Resources.Icon2;
 
             textBoxTabSize.Text = value.ToString();
         }

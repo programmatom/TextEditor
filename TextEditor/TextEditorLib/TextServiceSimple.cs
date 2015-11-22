@@ -331,7 +331,7 @@ namespace TextEditor
                     /* skipping over the word itself */
                     offset--;
                 }
-                Debug.Assert(!Char.IsLowSurrogate(pinLine.Ref[offset]));
+                Debug.Assert((offset == 0) || !Char.IsLowSurrogate(pinLine.Ref[offset]));
                 prevOffset = offset;
             }
         }
