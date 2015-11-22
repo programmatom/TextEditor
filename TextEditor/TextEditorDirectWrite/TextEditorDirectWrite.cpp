@@ -526,10 +526,10 @@ namespace TextEditor
                 metrics[i].width,
                 metrics[i].height);
             //rectF.Y -= service.baseline;
-		    int X = (int)Math::Floor(rectF.Left);
+		    int X = (int)Math::Round(rectF.Left); // rounding must match CharPosToX()
 		    //int Y = (int)Math::Floor(rectF.Top);
             int Y = 0;
-		    int Width = (int)Math::Ceiling(rectF.Width + rectF.Left - X);
+		    int Width = (int)Math::Round(rectF.Width + rectF.Left - X); // rounding must match CharPosToX()
 		    //int Height = (int)Math::Ceiling(rectF.Height + rectF.Top - Y);
             int Height = service->lineHeight;
             region->Union(System::Drawing::Rectangle(X, Y, Width, Height));
@@ -598,7 +598,7 @@ namespace TextEditor
 		    goto Error;
         }
 
-	    x = (int)Math::Round(x1);
+	    x = (int)Math::Round(x1); // rounding must match BuildRegion()
 
     Error:
 	    return hr;

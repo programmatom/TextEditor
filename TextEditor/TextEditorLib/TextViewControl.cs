@@ -54,7 +54,7 @@ namespace TextEditor
         private bool cursorEnabledFlag = true;
         private bool cursorDrawnFlag = true;
         private int stickyX;
-        //private bool cursorAdvancing = true; // TODO: for Uniscript, see https://msdn.microsoft.com/en-us/library/windows/desktop/dd317793%28v=vs.85%29.aspx
+        private bool cursorAdvancing; // for Uniscript, see https://msdn.microsoft.com/en-us/library/windows/desktop/dd317793%28v=vs.85%29.aspx
         private bool simpleNavigation; // uses Char.IsLetterOrDigit and Char.IsWhiteSpace even for Uniscribe - good for source code editors
 
         private int clickPhase;
@@ -77,9 +77,7 @@ namespace TextEditor
 
         private int fontHeight;
 
-        private ITextService textService = new TextServiceSimple(); // if changing, update TextService default value attribute as well
-        //private ITextService textService = new TextServiceUniscribe(); // if changing, update TextService default value attribute as well
-        //private ITextService textService = new TextServiceDirectWrite(); // if changing, update TextService default value attribute as well
+        private ITextService textService = new TextServiceUniscribe(); // if changing, update TextService default value attribute as well
 
         private bool requireHardened;
 
@@ -355,7 +353,7 @@ namespace TextEditor
 
         private void RecomputeCanvasSizeEstimated()
         {
-            if (textStorageFactory == null)
+            if ((textStorageFactory == null) || DesignMode)
             {
                 return;
             }
@@ -574,7 +572,7 @@ namespace TextEditor
 
                             if (cursorDrawnFlag && hasFocus)
                             {
-                                int screenX = ScreenXFromCharIndex(graphics2, index, selectStartChar);
+                                int screenX = ScreenXFromCharIndex(graphics2, index, selectStartChar, true/*forInsertionPoint*/);
                                 graphics2.DrawLine(
                                     normalForePen,
                                     new Point(screenX + anchor.X + (RightToLeft == RightToLeft.Yes ? -1 : 0), 0),
@@ -673,7 +671,7 @@ namespace TextEditor
                                 }
                                 if (activeLine == index)
                                 {
-                                    int screenX = ScreenXFromCharIndex(graphics2, activeLine, activeChar);
+                                    int screenX = ScreenXFromCharIndex(graphics2, activeLine, activeChar, true/*forInsertionPoint*/);
                                     graphics2.DrawLine(
                                         normalForePen,
                                         new Point(screenX + anchor.X + (RightToLeft == RightToLeft.Yes ? -1 : 0), 0),
@@ -785,7 +783,7 @@ namespace TextEditor
         }
 
         /* find out the pixel index of the left edge of the specified character */
-        public int ScreenXFromCharIndex(Graphics graphics, int lineIndex, int charIndex)
+        public int ScreenXFromCharIndex(Graphics graphics, int lineIndex, int charIndex, bool forInsertionPoint)
         {
             ValidateHardened();
             bool tabsFound;
@@ -795,7 +793,10 @@ namespace TextEditor
                 {
                     int columnIndex = GetColumnFromCharIndex(lineIndex, charIndex);
                     int indent;
-                    info.CharPosToX(graphics, columnIndex, false/*trailing*/, out indent);
+                    // for cursorAdvancing, see https://msdn.microsoft.com/en-us/library/windows/desktop/dd317793%28v=vs.85%29.aspx
+                    bool cursorAdvancing = forInsertionPoint ? this.cursorAdvancing : false;
+                    int adjust = forInsertionPoint ? (cursorAdvancing ? -1 : 0) : 0;
+                    info.CharPosToX(graphics, columnIndex + adjust, cursorAdvancing/*trailing*/, out indent);
                     if (RightToLeft == RightToLeft.Yes)
                     {
                         indent += currentWidth - info.GetExtent(graphics).Width;
@@ -803,6 +804,11 @@ namespace TextEditor
                     return indent;
                 }
             }
+        }
+
+        public int ScreenXFromCharIndex(Graphics graphics, int lineIndex, int charIndex)
+        {
+            return ScreenXFromCharIndex(graphics, lineIndex, charIndex, false);
         }
 
         /* convert a pixel position into the nearest character */
@@ -938,7 +944,8 @@ namespace TextEditor
                     stickyX = ScreenXFromCharIndex(
                         graphics,
                         selectStartIsActive ? selectStartLine : selectEndLine,
-                        selectStartIsActive ? selectStartChar : selectEndCharPlusOne);
+                        selectStartIsActive ? selectStartChar : selectEndCharPlusOne,
+                        true/*forInsertionPoint*/);
                 }
             }
         }
@@ -978,8 +985,7 @@ namespace TextEditor
         [Category("Behavior"), DefaultValue(false)]
         public bool SimpleNavigation { get { return simpleNavigation; } set { simpleNavigation = value; } }
 
-        [Browsable(false), DesignerSerializationVisibility(DesignerSerializationVisibility.Hidden)] // TODO: expose this when services have stabilized
-        [Category("Appearance"), DefaultValue(TextService.Simple)]
+        [Category("Appearance"), DefaultValue(TextService.Uniscribe)]
         public TextService TextService
         {
             get
@@ -1245,6 +1251,7 @@ namespace TextEditor
             int endCharPlusOne)
         {
             ValidateHardened();
+            SelPoint oldSelectionActive = SelectionActive;
             if ((startLine > endLine) || ((startLine == endLine) && (startChar > endCharPlusOne)))
             {
                 // Start line after end line
@@ -1287,6 +1294,7 @@ namespace TextEditor
             selectEndLine = endLine;
             selectStartChar = startChar;
             selectEndCharPlusOne = endCharPlusOne;
+            cursorAdvancing = SelectionActive >= oldSelectionActive;
             if ((startLine > oldSelectEndLine) || (endLine < oldSelectStartLine))
             {
                 /* old and new selection ranges are disjoint */
@@ -2021,7 +2029,11 @@ namespace TextEditor
 
             timerCursorBlink.Start();
 
-            // TODO: one last call to MoveMouseCapture()?
+            // one last call to MoveMouseCapture()
+            if (MouseMoveCapture != null)
+            {
+                MouseMoveCapture.Invoke(this, e);
+            }
 
             MouseMoveCapture = null;
             if (cursorEnabledFlag && !SelectionNonEmpty)

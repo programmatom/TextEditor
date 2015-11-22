@@ -285,169 +285,171 @@ namespace TextEditor
                 FontRunInfo[] fontRuns)
             {
                 TextItems o = new TextItems(service);
-
-                o.fontRuns = fontRuns;
-                for (int i = 0; i < fontRuns.Length; i++)
+                try
                 {
-                    o.count += fontRuns[i].count;
-                    o.lineHeight = Math.Max(o.lineHeight, fontRuns[i].font.Height);
-                }
-                if (o.count == 0)
-                {
-                    return o;
-                }
 
-
-                int hr;
-
-                // Lay Out Text Using Uniscribe
-
-                // 1. Call ScriptRecordDigitSubstitution only when starting or when receiving a WM_SETTINGCHANGE message.
-
-                // 2. (Optional) Call ScriptIsComplex to determine if the paragraph requires complex processing.
-                hr = ScriptIsComplex(
-                    hText,
-                    o.count,
-                    ScriptIsComplexFlags.SIC_ASCIIDIGIT | ScriptIsComplexFlags.SIC_COMPLEX);
-                if (hr < 0)
-                {
-                    Marshal.ThrowExceptionForHR(hr);
-                }
-                // Optional: if S_FALSE (1) is returned, one can fall back to TextRenderer and simplified hit testing
-
-                // 3. (Optional) If using Uniscribe to handle bidirectional text and/or digit substitution, call
-                // ScriptApplyDigitSubstitution to prepare the SCRIPT_CONTROL and SCRIPT_STATE structures as inputs
-                // to ScriptItemize. If skipping this step, but still requiring digit substitution, substitute
-                // national digits for Unicode U+0030 through U+0039 (European digits). For information about digit
-                // substitution, see Digit Shapes.
-                hr = ScriptApplyDigitSubstitution(
-                    null,
-                    out o.sControl,
-                    out o.sState);
-                if (hr < 0)
-                {
-                    Marshal.ThrowExceptionForHR(hr);
-                }
-
-                // 4. Call ScriptItemize to divide the paragraph into items. If not using Uniscribe for digit
-                // substitution and the bidirectional order is known, for example, because of the keyboard layout
-                // used to enter the character, call ScriptItemize. In the call, provide null pointers for the
-                // SCRIPT_CONTROL and SCRIPT_STATE structures. This technique generates items by use of the shaping
-                // engine only, and the items can be reordered using the engine information.
-                // Note: Typically, applications that work only with left-to-right scripts and without any digit
-                // substitution should pass null pointers for the SCRIPT_CONTROL and SCRIPT_STATE structures.
-
-                {
-                    int cMaxItems = 8;
-                    SCRIPT_ITEM[] sItems;
-                    OPENTYPE_TAG[] sTags;
-                    while (true)
+                    o.fontRuns = fontRuns;
+                    for (int i = 0; i < fontRuns.Length; i++)
                     {
-                        sItems = new SCRIPT_ITEM[cMaxItems + 1]; // method adds terminator;
-                        sTags = new OPENTYPE_TAG[cMaxItems];
-                        hr = ScriptItemizeOpenType(
-                            hText,
-                            o.count,
-                            cMaxItems,
-                            ref o.sControl,
-                            ref o.sState,
-                            sItems,
-                            sTags,
-                            out o.cItems);
-                        if (hr == E_OUTOFMEMORY)
-                        {
-                            cMaxItems *= 2;
-                            continue;
-                        }
-                        if (hr < 0)
-                        {
-                            Marshal.ThrowExceptionForHR(hr);
-                        }
-                        break;
+                        o.count += fontRuns[i].count;
+                        o.lineHeight = Math.Max(o.lineHeight, fontRuns[i].font.Height);
+                    }
+                    if (o.count == 0)
+                    {
+                        return o;
                     }
 
-                    o.sItems = sItems;
-                    o.sTags = sTags;
-                }
 
-                // 5. Merge the item information with the run information to produce ranges.
-                {
-                    int fontRunOffset = 0;
-                    int f = 0;
-                    int i = 0;
-                    while ((f < o.fontRuns.Length) && (i < o.cItems))
+                    int hr;
+
+                    // Lay Out Text Using Uniscribe
+
+                    // 1. Call ScriptRecordDigitSubstitution only when starting or when receiving a WM_SETTINGCHANGE message.
+
+                    // 2. (Optional) Call ScriptIsComplex to determine if the paragraph requires complex processing.
+                    hr = ScriptIsComplex(
+                        hText,
+                        o.count,
+                        ScriptIsComplexFlags.SIC_ASCIIDIGIT | ScriptIsComplexFlags.SIC_COMPLEX);
+                    if (hr < 0)
                     {
-                        if (fontRunOffset + o.fontRuns[f].count > o.sItems[i + 1].iCharPos)
-                        {
-                            // run is longer - current item remains intact; advance to next
-                            i++;
-                            continue;
-                        }
-                        else if (fontRunOffset + o.fontRuns[f].count < o.sItems[i + 1].iCharPos)
-                        {
-                            // item too long - split
-
-                            Array.Resize(ref o.sItems, o.cItems + 1 + 1);
-                            Array.Copy(o.sItems, i, o.sItems, i + 1, o.sItems.Length - (i + 1));
-                            Array.Resize(ref o.sTags, o.cItems + 1);
-                            Array.Copy(o.sTags, i, o.sTags, i + 1, o.sTags.Length - (i + 1));
-                            o.cItems++;
-
-                            o.sItems[i + 1].iCharPos = fontRunOffset + o.fontRuns[f].count;
-                        }
-                        Debug.Assert(fontRunOffset + o.fontRuns[f].count == o.sItems[i + 1].iCharPos);
-                        fontRunOffset += o.fontRuns[f].count;
-                        f++;
-                        i++;
+                        Marshal.ThrowExceptionForHR(hr);
                     }
-                    Debug.Assert(fontRunOffset == o.count);
-                    Debug.Assert(o.sItems[o.cItems].iCharPos == o.count);
-                }
+                    // Optional: if S_FALSE (1) is returned, one can fall back to TextRenderer and simplified hit testing
 
-                // 6. Call ScriptShape to identify clusters and generate glyphs.
-                o.sItemsExtra = new ItemInfo[o.cItems];
-                o.logAttrs = new SCRIPT_LOGATTR[o.count];
-                for (int i = 0; i < o.cItems; i++)
-                {
-                    int start = o.sItems[i].iCharPos;
-                    int length = o.sItems[i + 1].iCharPos - start;
-
-                    Font font = null;
-                    for (int f = 0, pos = 0; f < o.fontRuns.Length; pos += o.fontRuns[f].count, f++)
+                    // 3. (Optional) If using Uniscribe to handle bidirectional text and/or digit substitution, call
+                    // ScriptApplyDigitSubstitution to prepare the SCRIPT_CONTROL and SCRIPT_STATE structures as inputs
+                    // to ScriptItemize. If skipping this step, but still requiring digit substitution, substitute
+                    // national digits for Unicode U+0030 through U+0039 (European digits). For information about digit
+                    // substitution, see Digit Shapes.
+                    hr = ScriptApplyDigitSubstitution(
+                        null,
+                        out o.sControl,
+                        out o.sState);
+                    if (hr < 0)
                     {
-                        font = o.fontRuns[f].font;
-                        if (pos < start + length)
+                        Marshal.ThrowExceptionForHR(hr);
+                    }
+
+                    // 4. Call ScriptItemize to divide the paragraph into items. If not using Uniscribe for digit
+                    // substitution and the bidirectional order is known, for example, because of the keyboard layout
+                    // used to enter the character, call ScriptItemize. In the call, provide null pointers for the
+                    // SCRIPT_CONTROL and SCRIPT_STATE structures. This technique generates items by use of the shaping
+                    // engine only, and the items can be reordered using the engine information.
+                    // Note: Typically, applications that work only with left-to-right scripts and without any digit
+                    // substitution should pass null pointers for the SCRIPT_CONTROL and SCRIPT_STATE structures.
+
+                    {
+                        int cMaxItems = 8;
+                        SCRIPT_ITEM[] sItems;
+                        OPENTYPE_TAG[] sTags;
+                        while (true)
                         {
+                            sItems = new SCRIPT_ITEM[cMaxItems + 1]; // method adds terminator;
+                            sTags = new OPENTYPE_TAG[cMaxItems];
+                            hr = ScriptItemizeOpenType(
+                                hText,
+                                o.count,
+                                cMaxItems,
+                                ref o.sControl,
+                                ref o.sState,
+                                sItems,
+                                sTags,
+                                out o.cItems);
+                            if (hr == E_OUTOFMEMORY)
+                            {
+                                cMaxItems *= 2;
+                                continue;
+                            }
+                            if (hr < 0)
+                            {
+                                Marshal.ThrowExceptionForHR(hr);
+                            }
                             break;
                         }
+
+                        o.sItems = sItems;
+                        o.sTags = sTags;
                     }
 
-                    int cMaxGlyphs = (3 * o.count / 2) + 16; // recommended starting value
-                    short[] glyphs;
-                    short[] logicalClusters;
-                    SCRIPT_VISATTR[] visAttrs; // superceded by glyphProps
-                    SCRIPT_GLYPHPROP[] glyphProps;
-                    int cGlyphs;
-                    int fallbackLevel = 0;
-                    Font fallbackFont = null;
-                    SCRIPT_CHARPROP[] charProps = new SCRIPT_CHARPROP[length];
-                    while (true)
+                    // 5. Merge the item information with the run information to produce ranges.
                     {
-                        glyphs = new short[cMaxGlyphs];
-                        logicalClusters = new short[cMaxGlyphs];
-                        visAttrs = new SCRIPT_VISATTR[cMaxGlyphs];
-                        glyphProps = new SCRIPT_GLYPHPROP[cMaxGlyphs];
-
-                        bool needFallback = false;
-                        int fontCacheIndex = service.FontCacheIndex(font);
-
-                        GDIFont gdiFont;
-                        if (!service.fontToHFont.TryGetValue(font, out gdiFont))
+                        int fontRunOffset = 0;
+                        int f = 0;
+                        int i = 0;
+                        while ((f < o.fontRuns.Length) && (i < o.cItems))
                         {
-                            gdiFont = new GDIFont(font);
-                            service.fontToHFont.Add(font, gdiFont);
+                            if (fontRunOffset + o.fontRuns[f].count > o.sItems[i + 1].iCharPos)
+                            {
+                                // run is longer - current item remains intact; advance to next
+                                i++;
+                                continue;
+                            }
+                            else if (fontRunOffset + o.fontRuns[f].count < o.sItems[i + 1].iCharPos)
+                            {
+                                // item too long - split
+
+                                Array.Resize(ref o.sItems, o.cItems + 1 + 1);
+                                Array.Copy(o.sItems, i, o.sItems, i + 1, o.sItems.Length - (i + 1));
+                                Array.Resize(ref o.sTags, o.cItems + 1);
+                                Array.Copy(o.sTags, i, o.sTags, i + 1, o.sTags.Length - (i + 1));
+                                o.cItems++;
+
+                                o.sItems[i + 1].iCharPos = fontRunOffset + o.fontRuns[f].count;
+                            }
+                            Debug.Assert(fontRunOffset + o.fontRuns[f].count == o.sItems[i + 1].iCharPos);
+                            fontRunOffset += o.fontRuns[f].count;
+                            f++;
+                            i++;
                         }
-                        GDI.SelectObject(hdc, gdiFont);
+                        Debug.Assert(fontRunOffset == o.count);
+                        Debug.Assert(o.sItems[o.cItems].iCharPos == o.count);
+                    }
+
+                    // 6. Call ScriptShape to identify clusters and generate glyphs.
+                    o.sItemsExtra = new ItemInfo[o.cItems];
+                    o.logAttrs = new SCRIPT_LOGATTR[o.count];
+                    for (int i = 0; i < o.cItems; i++)
+                    {
+                        int start = o.sItems[i].iCharPos;
+                        int length = o.sItems[i + 1].iCharPos - start;
+
+                        Font font = null;
+                        for (int f = 0, pos = 0; f < o.fontRuns.Length; pos += o.fontRuns[f].count, f++)
+                        {
+                            font = o.fontRuns[f].font;
+                            if (pos < start + length)
+                            {
+                                break;
+                            }
+                        }
+
+                        int cMaxGlyphs = (3 * o.count / 2) + 16; // recommended starting value
+                        short[] glyphs;
+                        short[] logicalClusters;
+                        SCRIPT_VISATTR[] visAttrs; // superceded by glyphProps
+                        SCRIPT_GLYPHPROP[] glyphProps;
+                        int cGlyphs;
+                        int fallbackLevel = 0;
+                        Font fallbackFont = null;
+                        SCRIPT_CHARPROP[] charProps = new SCRIPT_CHARPROP[length];
+                        while (true)
+                        {
+                            glyphs = new short[cMaxGlyphs];
+                            logicalClusters = new short[cMaxGlyphs];
+                            visAttrs = new SCRIPT_VISATTR[cMaxGlyphs];
+                            glyphProps = new SCRIPT_GLYPHPROP[cMaxGlyphs];
+
+                            bool needFallback = false;
+                            int fontCacheIndex = service.FontCacheIndex(font);
+
+                            GDIFont gdiFont;
+                            if (!service.fontToHFont.TryGetValue(font, out gdiFont))
+                            {
+                                gdiFont = new GDIFont(font);
+                                service.fontToHFont.Add(font, gdiFont);
+                            }
+                            GDI.SelectObject(hdc, gdiFont);
 
 #if false // choose old or OpenType API
                         hr = ScriptShape(
@@ -462,127 +464,127 @@ namespace TextEditor
                             visAttrs,
                             out cGlyphs);
 #else
-                        hr = ScriptShapeOpenType(
-                            hdc,
-                            ref service.caches[fontCacheIndex].cache,
-                            ref o.sItems[i].a,
-                            o.sTags[i], // tagScript
-                            o.sTags[i], // tagLangSys -- right thing to pass here?
-                            null, // rcRangeChars
-                            null, // rpRangeProperties
-                            0, // cRanges
-                            new IntPtr(hText.ToInt64() + start * 2),
-                            length,
-                            cMaxGlyphs,
-                            logicalClusters,
-                            charProps,
-                            glyphs,
-                            glyphProps, // supercedes visAttrs
-                            out cGlyphs);
+                            hr = ScriptShapeOpenType(
+                                hdc,
+                                ref service.caches[fontCacheIndex].cache,
+                                ref o.sItems[i].a,
+                                o.sTags[i], // tagScript
+                                o.sTags[i], // tagLangSys -- right thing to pass here?
+                                null, // rcRangeChars
+                                null, // rpRangeProperties
+                                0, // cRanges
+                                new IntPtr(hText.ToInt64() + start * 2),
+                                length,
+                                cMaxGlyphs,
+                                logicalClusters,
+                                charProps,
+                                glyphs,
+                                glyphProps, // supercedes visAttrs
+                                out cGlyphs);
 #endif
-                        if (hr == E_OUTOFMEMORY)
-                        {
-                            cMaxGlyphs *= 2;
-                            glyphs = new short[cMaxGlyphs];
-                            logicalClusters = new short[cMaxGlyphs];
-                            visAttrs = new SCRIPT_VISATTR[cMaxGlyphs];
-                            continue;
-                        }
-                        if (hr == USP_E_SCRIPT_NOT_IN_FONT)
-                        {
-                            needFallback = true;
-                            goto FontFallback;
-                        }
-                        if (hr < 0)
-                        {
-                            Marshal.ThrowExceptionForHR(hr);
-                        }
-                        // 7. If ScriptShape returns the code USP_E_SCRIPT_NOT_IN_FONT or S_OK with the output containing
-                        // missing glyphs, select characters from a different font. Either substitute another font or disable
-                        // shaping by setting the eScript member of the SCRIPT_ANALYSIS structure passed to ScriptShape to
-                        // SCRIPT_UNDEFINED. For more information, see Using Font Fallback.
-                        SCRIPT_FONTPROPERTIES sfp;
-                        ScriptGetFontProperties(
-                            hdc,
-                            ref service.caches[fontCacheIndex].cache,
-                            out sfp);
-                        for (int j = 0; j < cGlyphs; j++)
-                        {
-                            if (glyphs[j] == sfp.wgDefault)
+                            if (hr == E_OUTOFMEMORY)
+                            {
+                                cMaxGlyphs *= 2;
+                                glyphs = new short[cMaxGlyphs];
+                                logicalClusters = new short[cMaxGlyphs];
+                                visAttrs = new SCRIPT_VISATTR[cMaxGlyphs];
+                                continue;
+                            }
+                            if (hr == USP_E_SCRIPT_NOT_IN_FONT)
                             {
                                 needFallback = true;
-                                break;
+                                goto FontFallback;
                             }
-                        }
-                    FontFallback:
-                        if (needFallback)
-                        {
-                            // What worked:
-                            // https://code.google.com/p/chromium/codesearch#chromium/src/ui/gfx/font_fallback_win.cc&q=uniscribe&sq=package:chromium&l=283&dr=CSs
-                            // http://stackoverflow.com/questions/16828868/how-to-automatically-choose-most-suitable-font-for-different-language
-                            // What didn't work:
-                            // The totally unhelpful Uniscribe font/script fallback documentation:
-                            // https://msdn.microsoft.com/en-us/library/windows/desktop/dd374105%28v=vs.85%29.aspx
-                            // MSDN Globalization how-to page about font fallback:
-                            // https://msdn.microsoft.com/en-us/goglobal/bb688134.aspx
-                            // ScriptShape page:
-                            // https://msdn.microsoft.com/en-us/library/windows/desktop/dd368564(v=vs.85).aspx
-
-                            fallbackLevel++;
-                            switch (fallbackLevel)
+                            if (hr < 0)
                             {
-                                case 1:
-                                    GDI.LOGFONT fallbackLF;
-                                    if (GetUniscribeFallbackFont(
-                                        font,
-                                        new IntPtr(hText.ToInt64() + 2 * start),
-                                        length,
-                                        out fallbackLF))
-                                    {
-                                        fallbackFont = null;
-                                        foreach (KeyValuePair<GDI.LOGFONT, Font> item in service.fallbackFonts)
-                                        {
-                                            if (String.Equals(item.Key.lfFaceName, fallbackLF.lfFaceName)
-                                                && (item.Key.lfCharSet == fallbackLF.lfCharSet)
-                                                && (item.Key.lfHeight == fallbackLF.lfHeight))
-                                            {
-                                                fallbackFont = item.Value;
-                                                break;
-                                            }
-                                        }
-                                        if (fallbackFont == null)
-                                        {
-                                            fallbackFont = Font.FromLogFont(fallbackLF);
-                                            service.fallbackFonts.Add(new KeyValuePair<GDI.LOGFONT, Font>(fallbackLF, fallbackFont));
-                                        }
-                                        font = fallbackFont;
-                                        continue;
-                                    }
-                                    continue;
-
-                                case 2:
-                                    if (o.sItems[i].a.eScript != SCRIPT_UNDEFINED)
-                                    {
-                                        o.sItems[i].a.eScript = SCRIPT_UNDEFINED;
-                                    }
-                                    continue;
-
-                                default:
-                                    // give up
-                                    break;
+                                Marshal.ThrowExceptionForHR(hr);
                             }
+                            // 7. If ScriptShape returns the code USP_E_SCRIPT_NOT_IN_FONT or S_OK with the output containing
+                            // missing glyphs, select characters from a different font. Either substitute another font or disable
+                            // shaping by setting the eScript member of the SCRIPT_ANALYSIS structure passed to ScriptShape to
+                            // SCRIPT_UNDEFINED. For more information, see Using Font Fallback.
+                            SCRIPT_FONTPROPERTIES sfp;
+                            ScriptGetFontProperties(
+                                hdc,
+                                ref service.caches[fontCacheIndex].cache,
+                                out sfp);
+                            for (int j = 0; j < cGlyphs; j++)
+                            {
+                                if (glyphs[j] == sfp.wgDefault)
+                                {
+                                    needFallback = true;
+                                    break;
+                                }
+                            }
+                        FontFallback:
+                            if (needFallback)
+                            {
+                                // What worked:
+                                // https://code.google.com/p/chromium/codesearch#chromium/src/ui/gfx/font_fallback_win.cc&q=uniscribe&sq=package:chromium&l=283&dr=CSs
+                                // http://stackoverflow.com/questions/16828868/how-to-automatically-choose-most-suitable-font-for-different-language
+                                // What didn't work:
+                                // The totally unhelpful Uniscribe font/script fallback documentation:
+                                // https://msdn.microsoft.com/en-us/library/windows/desktop/dd374105%28v=vs.85%29.aspx
+                                // MSDN Globalization how-to page about font fallback:
+                                // https://msdn.microsoft.com/en-us/goglobal/bb688134.aspx
+                                // ScriptShape page:
+                                // https://msdn.microsoft.com/en-us/library/windows/desktop/dd368564(v=vs.85).aspx
+
+                                fallbackLevel++;
+                                switch (fallbackLevel)
+                                {
+                                    case 1:
+                                        GDI.LOGFONT fallbackLF;
+                                        if (GetUniscribeFallbackFont(
+                                            font,
+                                            new IntPtr(hText.ToInt64() + 2 * start),
+                                            length,
+                                            out fallbackLF))
+                                        {
+                                            fallbackFont = null;
+                                            foreach (KeyValuePair<GDI.LOGFONT, Font> item in service.fallbackFonts)
+                                            {
+                                                if (String.Equals(item.Key.lfFaceName, fallbackLF.lfFaceName)
+                                                    && (item.Key.lfCharSet == fallbackLF.lfCharSet)
+                                                    && (item.Key.lfHeight == fallbackLF.lfHeight))
+                                                {
+                                                    fallbackFont = item.Value;
+                                                    break;
+                                                }
+                                            }
+                                            if (fallbackFont == null)
+                                            {
+                                                fallbackFont = Font.FromLogFont(fallbackLF);
+                                                service.fallbackFonts.Add(new KeyValuePair<GDI.LOGFONT, Font>(fallbackLF, fallbackFont));
+                                            }
+                                            font = fallbackFont;
+                                            continue;
+                                        }
+                                        continue;
+
+                                    case 2:
+                                        if (o.sItems[i].a.eScript != SCRIPT_UNDEFINED)
+                                        {
+                                            o.sItems[i].a.eScript = SCRIPT_UNDEFINED;
+                                        }
+                                        continue;
+
+                                    default:
+                                        // give up
+                                        break;
+                                }
+                            }
+
+                            break;
                         }
 
-                        break;
-                    }
-
-                    // 8. Call ScriptPlace to generate advance widths and x and y positions for the glyphs in each
-                    // successive range. This is the first step for which text size becomes a consideration.
-                    int[] iAdvances = new int[cGlyphs];
-                    GOFFSET[] goffsets = new GOFFSET[cGlyphs];
-                    ABC abc = new ABC();
-                    {
-                        int fontCacheIndex = service.FontCacheIndex(font);
+                        // 8. Call ScriptPlace to generate advance widths and x and y positions for the glyphs in each
+                        // successive range. This is the first step for which text size becomes a consideration.
+                        int[] iAdvances = new int[cGlyphs];
+                        GOFFSET[] goffsets = new GOFFSET[cGlyphs];
+                        ABC abc = new ABC();
+                        {
+                            int fontCacheIndex = service.FontCacheIndex(font);
 #if false // choose old or OpenType API
                         hr = ScriptPlace(
                             hdc,
@@ -595,106 +597,112 @@ namespace TextEditor
                             goffsets,
                             out abc);
 #else
-                        hr = ScriptPlaceOpenType(
-                            hdc,
-                            ref service.caches[fontCacheIndex].cache,
-                            ref o.sItems[i].a,
-                            o.sTags[i], // tagScript
-                            o.sTags[i], // tagLangSys -- right thing to pass here?
-                            null, // rcRangeChars
-                            null, // rpRangeProperties
-                            0, // cRanges
-                            new IntPtr(hText.ToInt64() + start * 2),
-                            logicalClusters,
-                            charProps,
-                            length,
-                            glyphs,
-                            glyphProps,
-                            cGlyphs,
-                            iAdvances,
-                            goffsets,
-                            out abc);
+                            hr = ScriptPlaceOpenType(
+                                hdc,
+                                ref service.caches[fontCacheIndex].cache,
+                                ref o.sItems[i].a,
+                                o.sTags[i], // tagScript
+                                o.sTags[i], // tagLangSys -- right thing to pass here?
+                                null, // rcRangeChars
+                                null, // rpRangeProperties
+                                0, // cRanges
+                                new IntPtr(hText.ToInt64() + start * 2),
+                                logicalClusters,
+                                charProps,
+                                length,
+                                glyphs,
+                                glyphProps,
+                                cGlyphs,
+                                iAdvances,
+                                goffsets,
+                                out abc);
 #endif
+                            if (hr < 0)
+                            {
+                                Marshal.ThrowExceptionForHR(hr);
+                            }
+                        }
+
+                        o.sItemsExtra[i].glyphs = glyphs;
+                        o.sItemsExtra[i].logicalClusters = logicalClusters;
+                        o.sItemsExtra[i].visAttrs = visAttrs;
+                        o.sItemsExtra[i].cGlyphs = cGlyphs;
+                        o.sItemsExtra[i].charProps = charProps;
+                        o.sItemsExtra[i].glyphProps = glyphProps;
+
+                        o.sItemsExtra[i].iAdvances = iAdvances;
+                        o.sItemsExtra[i].goffsets = goffsets;
+                        o.sItemsExtra[i].abc = abc;
+
+                        o.sItemsExtra[i].fallbackFont = fallbackFont;
+
+                        // 9. Sum the range sizes until the line overflows.
+
+                        // 10. Break the range on a word boundary by using the fSoftBreak and fWhiteSpace members in the
+                        // logical attributes. To break a single character cluster off the run, use the information returned
+                        // by calling ScriptBreak.
+                        // Note: Decide if the first code point of a range should be a word break point because the last
+                        // character of the previous range requires it. For example, if one range ends in a comma, consider
+                        // the first character of the next range to be a word break point.
+                        SCRIPT_LOGATTR[] logAttrs1 = new SCRIPT_LOGATTR[o.count];
+                        hr = ScriptBreak(
+                            new IntPtr(hText.ToInt64() + 2 * start),
+                            length,
+                            ref o.sItems[i].a,
+                            logAttrs1);
                         if (hr < 0)
                         {
                             Marshal.ThrowExceptionForHR(hr);
                         }
+                        Array.Copy(logAttrs1, 0, o.logAttrs, o.sItems[i].iCharPos, length);
+
+                        // 11. Repeat steps 6 through 10 for each line in the paragraph. However, if breaking the last run
+                        // on the line, call ScriptShape to reshape the remaining part of the run as the first run on the
+                        // next line.
                     }
 
-                    o.sItemsExtra[i].glyphs = glyphs;
-                    o.sItemsExtra[i].logicalClusters = logicalClusters;
-                    o.sItemsExtra[i].visAttrs = visAttrs;
-                    o.sItemsExtra[i].cGlyphs = cGlyphs;
-                    o.sItemsExtra[i].charProps = charProps;
-                    o.sItemsExtra[i].glyphProps = glyphProps;
 
-                    o.sItemsExtra[i].iAdvances = iAdvances;
-                    o.sItemsExtra[i].goffsets = goffsets;
-                    o.sItemsExtra[i].abc = abc;
+                    // Display Text Using Uniscribe
 
-                    o.sItemsExtra[i].fallbackFont = fallbackFont;
+                    // 1. For each run, do the following:
+                    // a. If the style has changed since the last run, update the handle to the device context by releasing
+                    //    and getting it again.
+                    // b. Call ScriptShape to generate glyphs for the run.
+                    // c. Call ScriptPlace to generate an advance width and an x,y offset for each glyph.
 
-                    // 9. Sum the range sizes until the line overflows.
-
-                    // 10. Break the range on a word boundary by using the fSoftBreak and fWhiteSpace members in the
-                    // logical attributes. To break a single character cluster off the run, use the information returned
-                    // by calling ScriptBreak.
-                    // Note: Decide if the first code point of a range should be a word break point because the last
-                    // character of the previous range requires it. For example, if one range ends in a comma, consider
-                    // the first character of the next range to be a word break point.
-                    SCRIPT_LOGATTR[] logAttrs1 = new SCRIPT_LOGATTR[o.count];
-                    hr = ScriptBreak(
-                        new IntPtr(hText.ToInt64() + 2 * start),
-                        length,
-                        ref o.sItems[i].a,
-                        logAttrs1);
+                    // 2. Do the following to establish the correct visual order for the runs in the line:
+                    // a. Extract an array of bidirectional embedding levels, one per range. The embedding level is
+                    //    given by (SCRIPT_ITEM) si.(SCRIPT_ANALYSIS) a. (SCRIPT_STATE) s.uBidiLevel.
+                    // b. Pass this array to ScriptLayout to generate a map of visual positions to logical positions.
+                    byte[] bidiEmbeddingLevels = new byte[o.cItems];
+                    for (int i = 0; i < o.cItems; i++)
+                    {
+                        bidiEmbeddingLevels[i] = (byte)o.sItems[i].a.s.uBidiLevel;
+                    }
+                    o.iVisualToLogical = new int[o.cItems];
+                    o.iLogicalToVisual = new int[o.cItems];
+                    hr = ScriptLayout(
+                        o.cItems,
+                        bidiEmbeddingLevels,
+                        o.iVisualToLogical,
+                        o.iLogicalToVisual);
                     if (hr < 0)
                     {
                         Marshal.ThrowExceptionForHR(hr);
                     }
-                    Array.Copy(logAttrs1, 0, o.logAttrs, o.sItems[i].iCharPos, length);
 
-                    // 11. Repeat steps 6 through 10 for each line in the paragraph. However, if breaking the last run
-                    // on the line, call ScriptShape to reshape the remaining part of the run as the first run on the
-                    // next line.
-                }
-
-
-                // Display Text Using Uniscribe
-
-                // 1. For each run, do the following:
-                // a. If the style has changed since the last run, update the handle to the device context by releasing
-                //    and getting it again.
-                // b. Call ScriptShape to generate glyphs for the run.
-                // c. Call ScriptPlace to generate an advance width and an x,y offset for each glyph.
-
-                // 2. Do the following to establish the correct visual order for the runs in the line:
-                // a. Extract an array of bidirectional embedding levels, one per range. The embedding level is
-                //    given by (SCRIPT_ITEM) si.(SCRIPT_ANALYSIS) a. (SCRIPT_STATE) s.uBidiLevel.
-                // b. Pass this array to ScriptLayout to generate a map of visual positions to logical positions.
-                byte[] bidiEmbeddingLevels = new byte[o.cItems];
-                for (int i = 0; i < o.cItems; i++)
-                {
-                    bidiEmbeddingLevels[i] = (byte)o.sItems[i].a.s.uBidiLevel;
-                }
-                o.iVisualToLogical = new int[o.cItems];
-                o.iLogicalToVisual = new int[o.cItems];
-                hr = ScriptLayout(
-                    o.cItems,
-                    bidiEmbeddingLevels,
-                    o.iVisualToLogical,
-                    o.iLogicalToVisual);
-                if (hr < 0)
-                {
-                    Marshal.ThrowExceptionForHR(hr);
-                }
-
-                for (int i = 0; i < o.cItems; i++)
-                {
-                    for (int j = 0; j < o.sItemsExtra[i].iAdvances.Length; j++)
+                    for (int i = 0; i < o.cItems; i++)
                     {
-                        o.sItemsExtra[i].totalWidth += o.sItemsExtra[i].iAdvances[j];
+                        for (int j = 0; j < o.sItemsExtra[i].iAdvances.Length; j++)
+                        {
+                            o.sItemsExtra[i].totalWidth += o.sItemsExtra[i].iAdvances[j];
+                        }
                     }
+                }
+                catch (Exception)
+                {
+                    o.Dispose();
+                    throw;
                 }
 
                 return o;
@@ -1110,7 +1118,7 @@ namespace TextEditor
                         Font font)
                     {
                         if (((offset >= sItems[iItem].iCharPos) && (offset < sItems[iItem + 1].iCharPos))
-                            || (trailing && (offset == sItems[iItem + 1].iCharPos))
+                            || (!trailing && (offset == sItems[iItem + 1].iCharPos))
                             || (iItem == cItems - 1))
                         {
                             int hr = ScriptCPtoX(

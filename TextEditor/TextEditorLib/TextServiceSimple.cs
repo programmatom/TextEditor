@@ -227,6 +227,10 @@ namespace TextEditor
                 bool trailing,
                 out int x)
             {
+                if (trailing)
+                {
+                    offset++;
+                }
                 float indent = MeasureTextPrefix(
                     graphics,
                     font,

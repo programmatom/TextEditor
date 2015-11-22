@@ -45,7 +45,9 @@ namespace TextEditor
             }
             catch (Exception exception)
             {
+                // dll load issue
                 Debugger.Break();
+                System.Windows.Forms.MessageBox.Show("Failed to load DirectWrite interop dll: " + exception.ToString());
             }
 
 #if true
