@@ -561,7 +561,7 @@ namespace TextEditor
         }
         _ASSERT(metrics.lineCount <= 1);
 
-        int width = (int)Math::Ceiling(metrics.widthIncludingTrailingWhitespace);
+        int width = (int)Math::Round(metrics.widthIncludingTrailingWhitespace); // rounding must match CharPosToX(), BuildRegion()
 
         // Note: height can increase when non-western scripts are introduced (e.g. Arabic and or Devanagari)
         // and font substitution decides it needs more space to comfortably display the text,

@@ -101,7 +101,7 @@ namespace TextEditor
 
             timerCursorBlink.Interval = (int)GetCaretBlinkTime();
             timerCursorBlink.Tick += new EventHandler(timerCursorBlink_Tick);
-            timerCursorBlink.Start();
+            //timerCursorBlink.Start();
 
             this.Disposed += new EventHandler(TextViewControl_Disposed);
 
@@ -174,7 +174,7 @@ namespace TextEditor
 
         public void ValidateHardened()
         {
-            if (requireHardened && !Hardened)
+            if (requireHardened && !Hardened && !DesignMode)
             {
                 throw new InvalidOperationException();
             }
@@ -211,6 +211,8 @@ namespace TextEditor
         {
             base.OnGotFocus(e);
 
+            timerCursorBlink.Start();
+
             hasFocus = true;
             RedrawSelection();
 
@@ -223,6 +225,8 @@ namespace TextEditor
         protected override void OnLostFocus(EventArgs e)
         {
             base.OnLostFocus(e);
+
+            timerCursorBlink.Stop();
 
             hasFocus = false;
             RedrawSelection();
@@ -794,8 +798,13 @@ namespace TextEditor
                     int columnIndex = GetColumnFromCharIndex(lineIndex, charIndex);
                     int indent;
                     // for cursorAdvancing, see https://msdn.microsoft.com/en-us/library/windows/desktop/dd317793%28v=vs.85%29.aspx
-                    bool cursorAdvancing = forInsertionPoint ? this.cursorAdvancing : false;
-                    int adjust = forInsertionPoint ? (cursorAdvancing ? -1 : 0) : 0;
+                    bool cursorAdvancing = false;
+                    int adjust = 0;
+                    if (forInsertionPoint && (columnIndex > 0))
+                    {
+                        cursorAdvancing = this.cursorAdvancing;
+                        adjust = cursorAdvancing ? -1 : 0;
+                    }
                     info.CharPosToX(graphics, columnIndex + adjust, cursorAdvancing/*trailing*/, out indent);
                     if (RightToLeft == RightToLeft.Yes)
                     {
@@ -2789,11 +2798,19 @@ namespace TextEditor
         {
             get
             {
+                if (DesignMode && (textStorage == null))
+                {
+                    return null;
+                }
                 ValidateHardened();
                 return textStorage.GetText(lineFeed);
             }
             set
             {
+                if (DesignMode && (textStorage == null))
+                {
+                    return;
+                }
                 ValidateHardened();
                 ReplaceRangeAndSelect(
                     All,

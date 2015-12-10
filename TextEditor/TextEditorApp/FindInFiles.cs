@@ -395,7 +395,8 @@ namespace TextEditor
     public class FindInFilesTask : BackgroundWorker
     {
         private readonly string pattern;
-        private readonly string[] extensions;
+        private readonly string[] extensionsIncluded = new string[0];
+        private readonly string[] extensionsExcluded = new string[0];
         private readonly string root;
         private readonly bool caseSensitive;
         private readonly bool matchWholeWords;
@@ -426,18 +427,35 @@ namespace TextEditor
             this.root = fullRoot;
             if (!String.IsNullOrEmpty(extensions))
             {
-                this.extensions = extensions.Split(new char[] { ';' }, StringSplitOptions.RemoveEmptyEntries);
-                for (int i = 0; i < this.extensions.Length; i++)
+                List<string> extensionsIncluded = new List<string>();
+                List<string> extensionsExcluded = new List<string>();
+                foreach (string extension1 in extensions.Split(new char[] { ';', ',' }, StringSplitOptions.RemoveEmptyEntries))
                 {
-                    if (this.extensions[i].StartsWith("*"))
+                    string extension = extension1;
+                    if (extension.StartsWith("*"))
                     {
-                        this.extensions[i] = this.extensions[i].Substring(1);
+                        extension = extension.Substring(1);
                     }
-                    if (!this.extensions[i].StartsWith("."))
+                    bool exclude = extension.StartsWith("!");
+                    if (exclude)
                     {
-                        this.extensions[i] = String.Concat(".", this.extensions[i]);
+                        extension = extension.Substring(1);
+                    }
+                    if (!extension.StartsWith("."))
+                    {
+                        extension = String.Concat(".", extension);
+                    }
+                    if (!exclude)
+                    {
+                        extensionsIncluded.Add(extension);
+                    }
+                    else
+                    {
+                        extensionsExcluded.Add(extension);
                     }
                 }
+                this.extensionsIncluded = extensionsIncluded.ToArray();
+                this.extensionsExcluded = extensionsExcluded.ToArray();
             }
             this.caseSensitive = caseSensitive;
             this.matchWholeWords = matchWholeWords;
@@ -489,24 +507,25 @@ namespace TextEditor
                     cancelled = true;
                     return;
                 }
-                if (extensions != null)
+
+                bool include;
                 {
-                    string fileExtension = Path.GetExtension(file);
-                    bool include = false;
-                    foreach (string extension in extensions)
+                    include = extensionsIncluded.Length == 0;
+                    string extension = Path.GetExtension(file).ToLowerInvariant();
+                    if (!include && (Array.IndexOf(extensionsIncluded, extension) >= 0))
                     {
-                        include = String.Equals(fileExtension, extension, StringComparison.OrdinalIgnoreCase);
-                        if (include)
-                        {
-                            break;
-                        }
+                        include = true;
                     }
-                    if (!include)
+                    if (include && (Array.IndexOf(extensionsExcluded, extension) >= 0))
                     {
-                        continue;
+                        include = false;
                     }
                 }
-                TestFile(file, relative);
+
+                if (include)
+                {
+                    TestFile(file, relative);
+                }
             }
             foreach (string dir in Directory.GetDirectories(root))
             {

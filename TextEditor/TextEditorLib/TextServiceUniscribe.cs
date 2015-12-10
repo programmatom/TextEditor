@@ -1228,7 +1228,10 @@ namespace TextEditor
                 while (offset < count)
                 {
                     offset++;
-                    if ((offset == count) || logAttrs[offset].fWordStop)
+                    if ((offset == count)
+                        || logAttrs[offset].fWordStop
+                        || logAttrs[offset].fSoftBreak
+                        || (logAttrs[offset].fWhiteSpace != logAttrs[offset - 1].fWhiteSpace))
                     {
                         break;
                     }
@@ -1241,7 +1244,10 @@ namespace TextEditor
                 while (offset > 0)
                 {
                     offset--;
-                    if ((offset == 0) || logAttrs[offset].fWordStop)
+                    if ((offset == 0)
+                        || logAttrs[offset].fWordStop
+                        || logAttrs[offset].fSoftBreak
+                        || ((offset - 1 >= 0) && (logAttrs[offset].fWhiteSpace != logAttrs[offset - 1].fWhiteSpace)))
                     {
                         break;
                     }
