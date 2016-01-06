@@ -182,15 +182,18 @@ namespace TextEditor
 
         public static void SecureZero(string str, IntPtr baseAddr)
         {
-            using (Pin<string> pinStr = new Pin<string>(str))
+            if (str.Length != 0)
             {
-                const int elementSize = 2;
-                if (pinStr.AddrOfPinnedObject() != baseAddr)
+                using (Pin<string> pinStr = new Pin<string>(str))
                 {
-                    Debug.Assert(false);
-                    throw new ArgumentException();
+                    const int elementSize = 2;
+                    if (pinStr.AddrOfPinnedObject() != baseAddr)
+                    {
+                        Debug.Assert(false);
+                        throw new ArgumentException();
+                    }
+                    SecureZero(pinStr.AddrOfPinnedObject(), str.Length * elementSize);
                 }
-                SecureZero(pinStr.AddrOfPinnedObject(), str.Length * elementSize);
             }
         }
 

@@ -558,6 +558,11 @@ namespace TextEditor
 
         public bool ProcessMenuItemDelegate(ToolStripMenuItem menuItem)
         {
+            if (!Enable)
+            {
+                return false;
+            }
+
             if (menuItem == undoToolStripMenuItem)
             {
                 undoToolStripMenuItem_Click(this, EventArgs.Empty);

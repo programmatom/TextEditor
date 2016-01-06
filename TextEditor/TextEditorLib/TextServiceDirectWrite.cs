@@ -29,6 +29,7 @@ using System.Globalization;
 using System.Reflection;
 using System.Runtime.InteropServices;
 using System.Text;
+using System.Windows.Forms;
 
 namespace TextEditor
 {
@@ -47,7 +48,7 @@ namespace TextEditor
             {
                 // dll load issue
                 Debugger.Break();
-                System.Windows.Forms.MessageBox.Show("Failed to load DirectWrite interop dll: " + exception.ToString());
+                MessageBox.Show("Failed to load DirectWrite interop dll: " + exception.ToString());
             }
 
 #if true
@@ -165,14 +166,32 @@ namespace TextEditor
                 Color foreColor,
                 Color backColor)
             {
-                int hr = lineInterop.DrawText(
-                    graphics,
-                    position,
-                    foreColor,
-                    backColor);
-                if (hr < 0)
+                try
                 {
-                    Marshal.ThrowExceptionForHR(hr);
+                    int hr = lineInterop.DrawText(
+                        graphics,
+                        position,
+                        foreColor,
+                        backColor);
+                    if (hr < 0)
+                    {
+                        Marshal.ThrowExceptionForHR(hr);
+                    }
+                }
+                // TODO: figure out why DW returns HR 0x8007007A on garbage strings (e.g. from opening binary files)
+                catch (COMException exception)
+                {
+                    using (Font font = new Font(FontFamily.GenericSansSerif, backing.Height / 2.5f, FontStyle.Regular))
+                    {
+                        TextRenderer.DrawText(
+                            graphics,
+                            exception.ToString(),
+                            font,
+                            position,
+                            foreColor,
+                            backColor,
+                            TextFormatFlags.Left | TextFormatFlags.NoPrefix | TextFormatFlags.NoPadding | TextFormatFlags.PreserveGraphicsClipping | TextFormatFlags.SingleLine);
+                    }
                 }
             }
 
@@ -182,32 +201,48 @@ namespace TextEditor
                 int startPos,
                 int endPosPlusOne)
             {
-                Region region;
-                int hr = lineInterop.BuildRegion(
-                    graphics,
-                    position,
-                    startPos,
-                    endPosPlusOne,
-                    out region);
-                if (hr < 0)
+                try
                 {
-                    Marshal.ThrowExceptionForHR(hr);
+                    Region region;
+                    int hr = lineInterop.BuildRegion(
+                        graphics,
+                        position,
+                        startPos,
+                        endPosPlusOne,
+                        out region);
+                    if (hr < 0)
+                    {
+                        Marshal.ThrowExceptionForHR(hr);
+                    }
+                    return region;
                 }
-                return region;
+                // TODO: figure out why DW returns HR 0x8007007A on garbage strings (e.g. from opening binary files)
+                catch (COMException)
+                {
+                    return new Region();
+                }
             }
 
             public Size GetExtent(
                 Graphics graphics)
             {
-                Size size;
-                int hr = lineInterop.GetExtent(
-                    graphics,
-                    out size);
-                if (hr < 0)
+                try
                 {
-                    Marshal.ThrowExceptionForHR(hr);
+                    Size size;
+                    int hr = lineInterop.GetExtent(
+                        graphics,
+                        out size);
+                    if (hr < 0)
+                    {
+                        Marshal.ThrowExceptionForHR(hr);
+                    }
+                    return size;
                 }
-                return size;
+                // TODO: figure out why DW returns HR 0x8007007A on garbage strings (e.g. from opening binary files)
+                catch (COMException)
+                {
+                    return new Size();
+                }
             }
 
             public void CharPosToX(
@@ -216,14 +251,22 @@ namespace TextEditor
                 bool trailing,
                 out int x)
             {
-                int hr = lineInterop.CharPosToX(
-                    graphics,
-                    offset,
-                    trailing,
-                    out x);
-                if (hr < 0)
+                try
                 {
-                    Marshal.ThrowExceptionForHR(hr);
+                    int hr = lineInterop.CharPosToX(
+                        graphics,
+                        offset,
+                        trailing,
+                        out x);
+                    if (hr < 0)
+                    {
+                        Marshal.ThrowExceptionForHR(hr);
+                    }
+                }
+                // TODO: figure out why DW returns HR 0x8007007A on garbage strings (e.g. from opening binary files)
+                catch (COMException)
+                {
+                    x = 0;
                 }
             }
 
@@ -233,14 +276,23 @@ namespace TextEditor
                 out int offset,
                 out bool trailing)
             {
-                int hr = lineInterop.XToCharPos(
-                    graphics,
-                    x,
-                    out offset,
-                    out trailing);
-                if (hr < 0)
+                try
                 {
-                    Marshal.ThrowExceptionForHR(hr);
+                    int hr = lineInterop.XToCharPos(
+                        graphics,
+                        x,
+                        out offset,
+                        out trailing);
+                    if (hr < 0)
+                    {
+                        Marshal.ThrowExceptionForHR(hr);
+                    }
+                }
+                // TODO: figure out why DW returns HR 0x8007007A on garbage strings (e.g. from opening binary files)
+                catch (COMException)
+                {
+                    offset = 0;
+                    trailing = false;
                 }
             }
 

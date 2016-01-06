@@ -1456,6 +1456,7 @@ namespace TextEditor
 
         public void SetSelectionLine(int lineIndex)
         {
+            lineIndex = Math.Min(Math.Max(lineIndex, 0), textStorage.Count - 1);
             SetSelection(lineIndex, 0, lineIndex, GetLine(lineIndex).Length);
         }
 
