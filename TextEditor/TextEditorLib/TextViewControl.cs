@@ -64,8 +64,6 @@ namespace TextEditor
 
         private char? deferredHighSurrogate; // for handling non-zero plane unicode character entry
 
-        private bool hasFocus;
-
         private int spacesPerTab = 8;
 
         private bool selectAllOnEnable;
@@ -213,7 +211,6 @@ namespace TextEditor
 
             timerCursorBlink.Start();
 
-            hasFocus = true;
             RedrawSelection();
 
             if (selectAllOnEnable)
@@ -228,7 +225,6 @@ namespace TextEditor
 
             timerCursorBlink.Stop();
 
-            hasFocus = false;
             RedrawSelection();
         }
 
@@ -540,7 +536,7 @@ namespace TextEditor
                     }
 
                     if ((index < selectStartLine) || (index > selectEndLine) || !cursorEnabledFlag
-                        || (hideSelectionOnFocusLost && !hasFocus))
+                        || (hideSelectionOnFocusLost && !Focused))
                     {
                         /* normal draw -- no part of the line is selected */
                         using (ITextInfo info = textService.AnalyzeText(
@@ -574,7 +570,7 @@ namespace TextEditor
                                     BackColor);
                             }
 
-                            if (cursorDrawnFlag && hasFocus)
+                            if (cursorDrawnFlag && Focused)
                             {
                                 int screenX = ScreenXFromCharIndex(graphics2, index, selectStartChar, true/*forInsertionPoint*/);
                                 graphics2.DrawLine(
@@ -644,14 +640,14 @@ namespace TextEditor
                                         highlight,
                                         CombineMode.Replace);
                                     graphics2.FillRectangle(
-                                        hasFocus ? selectedBackBrush : selectedBackBrushInactive,
+                                        Focused ? selectedBackBrush : selectedBackBrushInactive,
                                         rect2);
                                     info.DrawText(
                                         graphics2,
                                         offscreenStrip,
                                         new Point(anchor.X + rtlXAdjust, anchor.Y),
-                                        hasFocus ? selectedForeColor : selectedForeColorInactive,
-                                        hasFocus ? selectedBackColor : selectedBackColorInactive);
+                                        Focused ? selectedForeColor : selectedForeColorInactive,
+                                        Focused ? selectedBackColor : selectedBackColorInactive);
                                     graphics2.SetClip(
                                         highlight,
                                         CombineMode.Replace);
@@ -660,7 +656,7 @@ namespace TextEditor
 
                             // show active end
                             graphics2.SetClip(rect2);
-                            if (cursorDrawnFlag && hasFocus)
+                            if (cursorDrawnFlag && Focused)
                             {
                                 int activeLine, activeChar;
                                 if (selectStartIsActive)
@@ -2104,10 +2100,10 @@ namespace TextEditor
             return base.IsInputKey(keyData);
         }
 
-        // TODO: if Uniscribe works out, should use ScriptBreak for naviation stops
-
         protected override void OnKeyDown(KeyEventArgs e)
         {
+            Debug.Assert(MouseMoveCapture == null); // TODO: we may have to block this if it actually happens
+
             base.OnKeyDown(e);
             if (e.Handled)
             {

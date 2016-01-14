@@ -47,8 +47,8 @@ namespace TextEditor
 #else
         public const bool EnableValidate = false;
 #endif
-        public const int ValidateCutoffLines1 = 100;
-        public const int ValidateCutoffLines2 = 2500;
+        public const int ValidateCutoffLines1 = 50;
+        public const int ValidateCutoffLines2 = 1500;
 
         private static readonly byte[] WindowsLF = new byte[] { (byte)'\r', (byte)'\n' };
         private static readonly byte[] MacintoshLF = new byte[] { (byte)'\r' };

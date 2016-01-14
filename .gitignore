@@ -1,5 +1,7 @@
 # application compilation intermediate files
 
+/TextEditor/TextEditor.ncb
+/TextEditor/TextEditor.suo
 /TextEditor/TextEditorApp/obj/*
 /TextEditor/TextEditorDirectWrite/x64/*
 /TextEditor/TextEditorDirectWrite/*.vcproj.*.user

@@ -91,6 +91,13 @@ namespace TextEditor
         {
             return (~Line).GetHashCode() ^ Column.GetHashCode();
         }
+
+#if DEBUG
+        public override string ToString()
+        {
+            return String.Format("({0}, {1})", Line, Column);
+        }
+#endif
     }
 
     public struct SelRange
@@ -112,6 +119,13 @@ namespace TextEditor
             : this(new SelPoint(startLine, startChar), new SelPoint(endLine, endCharPlusOne))
         {
         }
+
+#if DEBUG
+        public override string ToString()
+        {
+            return String.Format("[{0}..{1}>", Start, End);
+        }
+#endif
     }
 
     public interface IDecodedTextLine : IDisposable

@@ -36,6 +36,13 @@ namespace TextEditor
                 : base(line)
             {
             }
+
+#if DEBUG
+            public override string ToString()
+            {
+                return Value;
+            }
+#endif
         }
 
         public class Utf8GapStorageLine : ITextLine
@@ -53,6 +60,13 @@ namespace TextEditor
             {
                 return new Utf8GapStorageDecodedLine(Encoding.UTF8.GetString(bytes));
             }
+
+#if DEBUG
+            public override string ToString()
+            {
+                return Encoding.UTF8.GetString(bytes);
+            }
+#endif
         }
 
         protected class Utf8GapStorage : TextStorage

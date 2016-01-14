@@ -39,7 +39,7 @@
   </ItemGroup>
   <ItemGroup>
     <Compile Include="FindInFiles.cs">
-      <SubType>Component</SubType>
+      <SubType>Form</SubType>
     </Compile>
     <Compile Include="FindInFiles.Designer.cs">
       <DependentUpon>FindInFiles.cs</DependentUpon>

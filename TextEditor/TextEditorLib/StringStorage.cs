@@ -57,6 +57,13 @@ namespace TextEditor
             {
                 GC.SuppressFinalize(this);
             }
+
+#if DEBUG
+            public override string ToString()
+            {
+                return line;
+            }
+#endif
         }
 
         public class StringStorageLine : ITextLine
@@ -79,6 +86,13 @@ namespace TextEditor
             {
                 return new StringStorageDecodedLine(line);
             }
+
+#if DEBUG
+            public override string ToString()
+            {
+                return line;
+            }
+#endif
         }
 
         protected class StringStorage : TextStorage

@@ -60,6 +60,13 @@ namespace TextEditor
                 pinLine.Dispose();
                 GC.SuppressFinalize(this);
             }
+
+#if DEBUG
+            public override string ToString()
+            {
+                return Value;
+            }
+#endif
         }
 
         protected class ProtectedStorageLine : ITextLine
@@ -182,6 +189,13 @@ namespace TextEditor
                     }
                 }
             }
+
+#if DEBUG
+            public override string ToString()
+            {
+                return String.Format("Length={0}", Length);
+            }
+#endif
         }
 
         protected class ProtectedStorage : TextStorage
