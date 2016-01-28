@@ -109,6 +109,8 @@ namespace TextEditor
             this.helper = new TextEditor.TextEditorWindowHelper(this.components);
             this.protectedStorageFactory = new TextEditor.ProtectedStorageFactory();
             this.utf8SplayGapBufferFactory = new TextEditor.Utf8SplayGapStorageFactory();
+            this.testInlineModeToolStripMenuItem = new System.Windows.Forms.ToolStripMenuItem();
+            this.toolStripMenuItem15 = new System.Windows.Forms.ToolStripSeparator();
             this.menuStrip.SuspendLayout();
             this.tableLayoutPanel1.SuspendLayout();
             this.toolStrip.SuspendLayout();
@@ -125,7 +127,8 @@ namespace TextEditor
             this.toolsToolStripMenuItem});
             this.menuStrip.Location = new System.Drawing.Point(0, 0);
             this.menuStrip.Name = "menuStrip";
-            this.menuStrip.Size = new System.Drawing.Size(359, 24);
+            this.menuStrip.Padding = new System.Windows.Forms.Padding(0);
+            this.menuStrip.Size = new System.Drawing.Size(360, 24);
             this.menuStrip.TabIndex = 0;
             // 
             // fileToolStripMenuItem
@@ -142,7 +145,7 @@ namespace TextEditor
             this.closeToolStripMenuItem,
             this.exitToolStripMenuItem});
             this.fileToolStripMenuItem.Name = "fileToolStripMenuItem";
-            this.fileToolStripMenuItem.Size = new System.Drawing.Size(37, 20);
+            this.fileToolStripMenuItem.Size = new System.Drawing.Size(37, 24);
             this.fileToolStripMenuItem.Text = "&File";
             // 
             // newToolStripMenuItem
@@ -273,7 +276,7 @@ namespace TextEditor
             this.toolStripMenuItem9,
             this.goToLineToolStripMenuItem});
             this.editToolStripMenuItem.Name = "editToolStripMenuItem";
-            this.editToolStripMenuItem.Size = new System.Drawing.Size(39, 20);
+            this.editToolStripMenuItem.Size = new System.Drawing.Size(39, 24);
             this.editToolStripMenuItem.Text = "&Edit";
             // 
             // undoToolStripMenuItem
@@ -440,7 +443,7 @@ namespace TextEditor
             this.toolStripMenuItem6,
             this.defaultSettingsToolStripMenuItem});
             this.settingsToolStripMenuItem.Name = "settingsToolStripMenuItem";
-            this.settingsToolStripMenuItem.Size = new System.Drawing.Size(61, 20);
+            this.settingsToolStripMenuItem.Size = new System.Drawing.Size(61, 24);
             this.settingsToolStripMenuItem.Text = "&Settings";
             // 
             // windowsLineBreaksToolStripMenuItem
@@ -570,6 +573,8 @@ namespace TextEditor
             // toolsToolStripMenuItem
             // 
             this.toolsToolStripMenuItem.DropDownItems.AddRange(new System.Windows.Forms.ToolStripItem[] {
+            this.testInlineModeToolStripMenuItem,
+            this.toolStripMenuItem15,
             this.previousUTF16SurrogatePairToolStripMenuItem,
             this.nextUTF16SurrogatePairToolStripMenuItem,
             this.toolStripMenuItem12,
@@ -577,7 +582,7 @@ namespace TextEditor
             this.toolStripMenuItem13,
             this.findInFilesToolStripMenuItem});
             this.toolsToolStripMenuItem.Name = "toolsToolStripMenuItem";
-            this.toolsToolStripMenuItem.Size = new System.Drawing.Size(47, 20);
+            this.toolsToolStripMenuItem.Size = new System.Drawing.Size(47, 24);
             this.toolsToolStripMenuItem.Text = "&Tools";
             // 
             // previousUTF16SurrogatePairToolStripMenuItem
@@ -630,6 +635,7 @@ namespace TextEditor
             this.tableLayoutPanel1.Controls.Add(this.menuStrip, 0, 0);
             this.tableLayoutPanel1.Dock = System.Windows.Forms.DockStyle.Fill;
             this.tableLayoutPanel1.Location = new System.Drawing.Point(0, 0);
+            this.tableLayoutPanel1.Margin = new System.Windows.Forms.Padding(0);
             this.tableLayoutPanel1.Name = "tableLayoutPanel1";
             this.tableLayoutPanel1.RowCount = 2;
             this.tableLayoutPanel1.RowStyles.Add(new System.Windows.Forms.RowStyle());
@@ -650,9 +656,10 @@ namespace TextEditor
             this.toolStripTextBoxColumn,
             this.toolStripLabel2,
             this.toolStripTextBoxCharacter});
-            this.toolStrip.Location = new System.Drawing.Point(359, 0);
+            this.toolStrip.Location = new System.Drawing.Point(360, 0);
             this.toolStrip.Name = "toolStrip";
-            this.toolStrip.Size = new System.Drawing.Size(274, 25);
+            this.toolStrip.Padding = new System.Windows.Forms.Padding(0);
+            this.toolStrip.Size = new System.Drawing.Size(273, 25);
             this.toolStrip.TabIndex = 2;
             // 
             // toolStripLabelBackingStore
@@ -704,9 +711,10 @@ namespace TextEditor
             this.textEditControl.BackColor = System.Drawing.SystemColors.ControlLightLight;
             this.tableLayoutPanel1.SetColumnSpan(this.textEditControl, 2);
             this.textEditControl.Dock = System.Windows.Forms.DockStyle.Fill;
-            this.textEditControl.Location = new System.Drawing.Point(3, 28);
+            this.textEditControl.Location = new System.Drawing.Point(0, 25);
+            this.textEditControl.Margin = new System.Windows.Forms.Padding(0);
             this.textEditControl.Name = "textEditControl";
-            this.textEditControl.Size = new System.Drawing.Size(627, 389);
+            this.textEditControl.Size = new System.Drawing.Size(633, 395);
             this.textEditControl.TabIndex = 1;
             this.textEditControl.TextStorageFactory = null;
             // 
@@ -730,6 +738,18 @@ namespace TextEditor
             this.helper.TextEditControl = this.textEditControl;
             this.helper.TrimTrailingSpacesToolStripMenuItem = this.trimTrailingSpacesToolStripMenuItem;
             this.helper.UndoToolStripMenuItem = this.undoToolStripMenuItem;
+            // 
+            // testInlineModeToolStripMenuItem
+            // 
+            this.testInlineModeToolStripMenuItem.Name = "testInlineModeToolStripMenuItem";
+            this.testInlineModeToolStripMenuItem.Size = new System.Drawing.Size(256, 22);
+            this.testInlineModeToolStripMenuItem.Text = "Test Inline Mode...";
+            this.testInlineModeToolStripMenuItem.Click += new System.EventHandler(this.testInlineModeToolStripMenuItem_Click);
+            // 
+            // toolStripMenuItem15
+            // 
+            this.toolStripMenuItem15.Name = "toolStripMenuItem15";
+            this.toolStripMenuItem15.Size = new System.Drawing.Size(253, 6);
             // 
             // TextEditorWindow
             // 
@@ -831,5 +851,7 @@ namespace TextEditor
         private System.Windows.Forms.ToolStripMenuItem findInFilesToolStripMenuItem;
         private System.Windows.Forms.ToolStripSeparator toolStripMenuItem14;
         private System.Windows.Forms.ToolStripMenuItem simpleNavigationToolStripMenuItem;
+        private System.Windows.Forms.ToolStripMenuItem testInlineModeToolStripMenuItem;
+        private System.Windows.Forms.ToolStripSeparator toolStripMenuItem15;
     }
 }

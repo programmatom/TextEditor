@@ -1,5 +1,5 @@
-/*
- *  Copyright � 1992-2002, 2015 Thomas R. Lawrence
+﻿/*
+ *  Copyright © 1992-2002, 2015 Thomas R. Lawrence
  * 
  *  GNU General Public License
  * 
@@ -19,621 +19,144 @@
  *  along with this program.  If not, see <http://www.gnu.org/licenses/>.
  * 
 */
-
 using System;
 using System.Collections.Generic;
-using System.ComponentModel;
-using System.Data;
-using System.Diagnostics;
 using System.Drawing;
 using System.IO;
 using System.Text;
-using System.Threading;
 using System.Windows.Forms;
 
 namespace TextEditor
 {
-    public partial class FindInFiles : Form
+    public class FindInFilesApplication : IFindInFilesApplication
     {
-        private readonly BindingList<FindInFilesEntry> results = new BindingList<FindInFilesEntry>();
-        private FindInFilesTask task;
-        private readonly Dictionary<string, TextEditorWindow> windows = new Dictionary<string, TextEditorWindow>();
+        public Icon ApplicationIcon { get { return TextEditorApp.Properties.Resources.Icon2; } }
+        public string ApplicationName { get { return Application.ProductName; } }
 
-        private static int lastPathNumber;
-        private static int pathCounter;
-        private static Dictionary<string, int> searchedPaths;
-
-        private static int lastExtensionNumber;
-        private static int extensionCounter;
-        private static Dictionary<string, int> searchedExtensions;
-
-        public FindInFiles()
+        public IFindInFilesWindow Open(IFindInFilesItem item)
         {
-            InitializeComponent();
-            this.Icon = TextEditorApp.Properties.Resources.Icon2;
-
-            SetUpComboBox(
-                ref pathCounter,
-                ref lastPathNumber,
-                ref searchedPaths,
-                MainClass.Config.SearchPaths,
-                comboBoxSearchPath);
-            comboBoxSearchPath.SelectedValueChanged += new EventHandler(comboBoxSearchPath_SelectedValueChanged);
-
-            SetUpComboBox(
-                ref extensionCounter,
-                ref lastExtensionNumber,
-                ref searchedExtensions,
-                MainClass.Config.SearchExtensions,
-                comboBoxSearchExtensions);
-            comboBoxSearchExtensions.SelectedValueChanged += new EventHandler(comboBoxSearchExtensions_SelectedValueChanged);
-
-            dataGridViewFindResults.DataSource = new BindingSource(results, null);
-            dataGridViewFindResults.CellMouseDoubleClick += new DataGridViewCellMouseEventHandler(dataGridViewFindResults_CellMouseDoubleClick);
-            dataGridViewFindResults.EnterKeyPressed += new EventHandler(dataGridViewFindResults_EnterKeyPressed);
+            TextEditorWindow window = TextEditorWindow.GetWindowForLoadHelper();
+            window.LoadFile(item.GetPath());
+            window.Show();
+            return window;
         }
 
-        private static void SetUpComboBox(
-            ref int counter,
-            ref int lastNumber,
-            ref Dictionary<string, int> searched,
-            SearchCombos searchCombos,
-            ComboBox comboBox)
+        public SearchCombos Config_SearchPaths
         {
-            if (searched == null)
+            get
             {
-                searched = new Dictionary<string, int>();
-                foreach (string item in searchCombos.items)
-                {
-                    int current = counter++;
-                    searched.Add(item, current);
-                    if (String.Equals(item, searchCombos.last))
-                    {
-                        lastNumber = current;
-                    }
-                }
+                return MainClass.Config.SearchPaths;
             }
-            KeyValuePair<string, int>[] searched2 = new KeyValuePair<string, int>[searched.Count];
-            int i = 0;
-            foreach (KeyValuePair<string, int> item in searched)
+            set
             {
-                searched2[i++] = item;
-            }
-            Array.Sort(searched2, delegate(KeyValuePair<string, int> l, KeyValuePair<string, int> r) { return l.Value.CompareTo(r.Value); });
-            foreach (KeyValuePair<string, int> item in searched2)
-            {
-                comboBox.Items.Add(item.Key);
-                if (item.Value == lastNumber)
-                {
-                    comboBox.SelectedItem = item.Key;
-                }
+                MainClass.Config.SearchPaths = value;
+                MainClass.SaveSettings();
             }
         }
 
-        protected override void OnFormClosing(FormClosingEventArgs e)
+        public SearchCombos Config_SearchExtensions
         {
-            if (task != null)
+            get
             {
-                task.CancelAsync();
+                return MainClass.Config.SearchExtensions;
             }
-            base.OnFormClosing(e);
-        }
-
-        private void comboBoxSearchPath_SelectedValueChanged(object sender, EventArgs e)
-        {
-            int i;
-            if (searchedPaths.TryGetValue(this.comboBoxSearchPath.Text, out i))
+            set
             {
-                lastPathNumber = i;
+                MainClass.Config.SearchExtensions = value;
+                MainClass.SaveSettings();
             }
         }
 
-        private void comboBoxSearchExtensions_SelectedValueChanged(object sender, EventArgs e)
+        public IFindInFilesNode GetNodeForPath(string path)
         {
-            int i;
-            if (searchedExtensions.TryGetValue(this.comboBoxSearchExtensions.Text, out i))
-            {
-                lastExtensionNumber = i;
-            }
-        }
-
-        private void dataGridViewFindResults_CellMouseDoubleClick(object sender, DataGridViewCellMouseEventArgs e)
-        {
-            if (dataGridViewFindResults.CurrentRow == null)
-            {
-                return;
-            }
-            int r = dataGridViewFindResults.CurrentRow.Index; //e.RowIndex;
-            FindInFilesEntry entry = results[r];
-            TextEditorWindow window;
-            if (windows.TryGetValue(entry.Path, out window))
-            {
-                if (window.IsDisposed)
-                {
-                    windows.Remove(entry.Path);
-                    window = null;
-                }
-            }
-            if (window == null)
-            {
-                window = TextEditorWindow.GetWindowForLoadHelper();
-                window.LoadFile(entry.Path);
-                window.Show();
-                windows.Add(entry.Path, window);
-            }
-            else
-            {
-                window.Activate();
-            }
-            window.SetSelection(Math.Max(entry.LineNumber - 1, 0), entry.StartChar, Math.Max(entry.LineNumber - 1, 0), entry.EndCharP1);
-        }
-
-        private void dataGridViewFindResults_EnterKeyPressed(object sender, EventArgs e)
-        {
-            dataGridViewFindResults_CellMouseDoubleClick(sender, null);
-        }
-
-        private void buttonFind_Click(object sender, EventArgs e)
-        {
-            if (task == null)
-            {
-                if (String.IsNullOrEmpty(this.textBoxSearchFor.Text))
-                {
-                    MessageBox.Show("Search string can't be empty", "Text Editor", MessageBoxButtons.OK, MessageBoxIcon.Error);
-                    return;
-                }
-                string fullPath;
-                try
-                {
-                    fullPath = Path.GetFullPath(this.comboBoxSearchPath.Text);
-                }
-                catch (Exception exception)
-                {
-                    MessageBox.Show(String.Format("Search path is invalid: {0}", exception.Message), "Text Editor", MessageBoxButtons.OK, MessageBoxIcon.Error);
-                    return;
-                }
-                if (!Directory.Exists(fullPath))
-                {
-                    MessageBox.Show("Search path directory does not exist.", "Text Editor", MessageBoxButtons.OK, MessageBoxIcon.Error);
-                    return;
-                }
-
-                int pathIndex;
-                if (!searchedPaths.TryGetValue(fullPath, out pathIndex))
-                {
-                    pathIndex = pathCounter++;
-                    searchedPaths.Add(fullPath, pathIndex);
-                }
-                lastPathNumber = pathIndex;
-                int extensionIndex;
-                if (!searchedExtensions.TryGetValue(comboBoxSearchExtensions.Text, out extensionIndex))
-                {
-                    extensionIndex = extensionCounter++;
-                    searchedExtensions.Add(comboBoxSearchExtensions.Text, extensionIndex);
-                }
-                lastExtensionNumber = extensionIndex;
-                UpdateSettings();
-
-                if (!comboBoxSearchPath.Items.Contains(fullPath))
-                {
-                    comboBoxSearchPath.Items.Add(fullPath);
-                    comboBoxSearchPath.SelectedValue = fullPath;
-                }
-                if (!comboBoxSearchExtensions.Items.Contains(comboBoxSearchExtensions.Text))
-                {
-                    string text = comboBoxSearchExtensions.Text;
-                    comboBoxSearchExtensions.Items.Add(text);
-                    comboBoxSearchExtensions.SelectedValue = text;
-                }
-
-                results.Clear();
-                task = new FindInFilesTask(
-                    this.textBoxSearchFor.Text,
-                    fullPath,
-                    comboBoxSearchExtensions.Text,
-                    this.checkBoxCaseSensitive.Checked,
-                    this.checkBoxMatchWholeWord.Checked);
-                task.ProgressChanged += new ProgressChangedEventHandler(task_ProgressChanged);
-                task.RunWorkerCompleted += new RunWorkerCompletedEventHandler(task_RunWorkerCompleted);
-                buttonFind.Text = "Stop Find";
-                task.RunWorkerAsync();
-                timerStatusUpdate.Start();
-
-                dataGridViewFindResults.Focus();
-            }
-            else
-            {
-                task.CancelAsync();
-                task.ProgressChanged -= new ProgressChangedEventHandler(task_ProgressChanged);
-                task.RunWorkerCompleted -= new RunWorkerCompletedEventHandler(task_RunWorkerCompleted);
-                buttonFind.Text = "Find";
-                task = null;
-                labelStatus.Text = null;
-                timerStatusUpdate.Stop();
-            }
-        }
-
-        private static SearchCombos GetCombo(
-            Dictionary<string, int> searched,
-            int lastNumber)
-        {
-            List<string> items = new List<string>();
-            string last = null;
-            foreach (KeyValuePair<string, int> item in searched)
-            {
-                items.Add(item.Key);
-                if (lastNumber == item.Value)
-                {
-                    last = item.Key;
-                }
-            }
-            return new SearchCombos(items.ToArray(), last);
-        }
-
-        private void UpdateSettings()
-        {
-            MainClass.Config.SearchPaths = GetCombo(searchedPaths, lastPathNumber);
-            MainClass.Config.SearchExtensions = GetCombo(searchedExtensions, lastExtensionNumber);
-            MainClass.SaveSettings();
-        }
-
-        private void task_ProgressChanged(object sender, ProgressChangedEventArgs e)
-        {
-            if (!IsDisposed)
-            {
-                FindInFilesEntry[] entries = (FindInFilesEntry[])e.UserState;
-                for (int i = 0; i < entries.Length; i++)
-                {
-                    results.Add(entries[i]);
-                }
-                task.Release();
-            }
-        }
-
-        private void task_RunWorkerCompleted(object sender, RunWorkerCompletedEventArgs e)
-        {
-            buttonFind.Text = "Find";
-            task = null;
-            labelStatus.Text = null;
-            timerStatusUpdate.Stop();
-        }
-
-        private void timerStatusUpdate_Tick(object sender, EventArgs e)
-        {
-            string status = String.Empty;
-            if (task != null)
-            {
-                status = task.CurrentPath;
-            }
-            labelStatus.Text = status;
-        }
-
-        private void buttonFileDialog_Click(object sender, EventArgs e)
-        {
-#if false
-            // FolderBrowserDialog is unusable crap.
-            using (FolderBrowserDialog dialog = new FolderBrowserDialog())
-            {
-                if (dialog.ShowDialog() == DialogResult.OK)
-                {
-                    comboBoxSearchPath.Text = dialog.SelectedPath;
-                }
-            }
-#else
-            // HACK: based on what WinMerge does - usability is suspect but still much better than FolderBrowserDialog.
-            // See: http://www.codeproject.com/Articles/44914/Select-file-or-folder-from-the-same-dialog
-            using (OpenFileDialog dialog = new OpenFileDialog())
-            {
-                dialog.ValidateNames = false;
-                dialog.CheckFileExists = false;
-                dialog.CheckPathExists = false;
-                dialog.Title = "Select a Folder";
-                dialog.FileName = "Select Folder.";
-                if (dialog.ShowDialog() == DialogResult.OK)
-                {
-                    comboBoxSearchPath.Text = Path.GetDirectoryName(dialog.FileName);
-                }
-            }
-#endif
+            return new FindInFilesNode(path);
         }
     }
 
-    public class MyDataGridView : DataGridView
+    public class FindInFilesNode : IFindInFilesNode
     {
-        public event EventHandler EnterKeyPressed;
+        private readonly string root;
 
-        protected override bool ProcessCmdKey(ref Message msg, Keys keyData)
+        public FindInFilesNode(string root)
         {
-            if (keyData == Keys.Enter)
+            this.root = root;
+        }
+
+        public IFindInFilesNode[] GetDirectories()
+        {
+            string[] directories = Directory.GetDirectories(root);
+            IFindInFilesNode[] nodes = new IFindInFilesNode[directories.Length];
+            for (int i = 0; i < nodes.Length; i++)
             {
-                if (EnterKeyPressed != null)
-                {
-                    EnterKeyPressed.Invoke(this, EventArgs.Empty);
-                }
-                return true;
+                nodes[i] = new FindInFilesNode(directories[i]);
             }
-
-            return base.ProcessCmdKey(ref msg, keyData);
+            return nodes;
         }
-    }
 
-    public class MyLabel : Label
-    {
-        protected override void OnPaint(PaintEventArgs e)
+        public IFindInFilesItem[] GetFiles()
         {
-            TextRenderer.DrawText(e.Graphics, Text, Font, ClientRectangle, ForeColor, BackColor, TextFormatFlags.PathEllipsis | TextFormatFlags.SingleLine);
+            string[] files = Directory.GetFiles(root);
+            IFindInFilesItem[] nodes = new IFindInFilesItem[files.Length];
+            for (int i = 0; i < nodes.Length; i++)
+            {
+                nodes[i] = new FindInFilesItem(files[i]);
+            }
+            return nodes;
+        }
+
+        public string GetPath()
+        {
+            return root;
+        }
+
+        public string GetFileName()
+        {
+            return Path.GetFileName(root);
         }
     }
 
-    public class FindInFilesEntry
+    public class FindInFilesItem : IFindInFilesItem
     {
         private readonly string path;
-        private readonly string displayPath;
-        private readonly string line;
-        private readonly int lineNumber;
-        private readonly int startChar;
-        private readonly int endCharP1;
 
-        public FindInFilesEntry(string path, string displayPath, string line, int lineNumber, int startChar, int endCharP1)
+        public FindInFilesItem(string path)
         {
             this.path = path;
-            this.displayPath = displayPath;
-            this.line = line;
-            this.lineNumber = lineNumber;
-            this.startChar = startChar;
-            this.endCharP1 = endCharP1;
         }
 
-        public string Path { get { return path; } }
-        public string DisplayPath { get { return displayPath; } }
-        public int LineNumber { get { return lineNumber; } }
-        public string FormattedLine { get { return line; } }
-        public int StartChar { get { return startChar; } }
-        public int EndCharP1 { get { return endCharP1; } }
-    }
-
-    public class FindInFilesTask : BackgroundWorker
-    {
-        private readonly string pattern;
-        private readonly string[] extensionsIncluded = new string[0];
-        private readonly string[] extensionsExcluded = new string[0];
-        private readonly string root;
-        private readonly bool caseSensitive;
-        private readonly bool matchWholeWords;
-        private string currentPath;
-        private const int ChunkLength = 16;
-        private readonly List<FindInFilesEntry> results = new List<FindInFilesEntry>(ChunkLength);
-        private DateTime lastFlush;
-        private AutoResetEvent interlock;
-
-        public FindInFilesTask(
-            string pattern,
-            string root,
-            string extensions,
-            bool caseSensitive,
-            bool matchWholeWords)
+        public string GetPath()
         {
-            if (String.IsNullOrEmpty(pattern))
-            {
-                throw new ArgumentException();
-            }
-            string fullRoot = Path.GetFullPath(root);
-            if (!Directory.Exists(fullRoot))
-            {
-                throw new ArgumentException();
-            }
-
-            this.pattern = pattern;
-            this.root = fullRoot;
-            if (!String.IsNullOrEmpty(extensions))
-            {
-                List<string> extensionsIncluded = new List<string>();
-                List<string> extensionsExcluded = new List<string>();
-                foreach (string extension1 in extensions.Split(new char[] { ';', ',' }, StringSplitOptions.RemoveEmptyEntries))
-                {
-                    string extension = extension1;
-                    if (extension.StartsWith("*"))
-                    {
-                        extension = extension.Substring(1);
-                    }
-                    bool exclude = extension.StartsWith("!");
-                    if (exclude)
-                    {
-                        extension = extension.Substring(1);
-                    }
-                    if (!extension.StartsWith("."))
-                    {
-                        extension = String.Concat(".", extension);
-                    }
-                    if (!exclude)
-                    {
-                        extensionsIncluded.Add(extension);
-                    }
-                    else
-                    {
-                        extensionsExcluded.Add(extension);
-                    }
-                }
-                this.extensionsIncluded = extensionsIncluded.ToArray();
-                this.extensionsExcluded = extensionsExcluded.ToArray();
-            }
-            this.caseSensitive = caseSensitive;
-            this.matchWholeWords = matchWholeWords;
-
-            this.WorkerReportsProgress = true;
-            this.WorkerSupportsCancellation = true;
+            return path;
         }
 
-        public string CurrentPath { get { return currentPath; } }
-
-        public void Release()
+        public string GetFileName()
         {
-            AutoResetEvent interlock = this.interlock;
-            if (interlock != null)
-            {
-                interlock.Set();
-            }
+            return Path.GetFileName(path);
         }
 
-        protected override void OnDoWork(DoWorkEventArgs e)
+        public string GetExtension()
         {
-            bool cancelled = false;
-            try
-            {
-                this.interlock = new AutoResetEvent(false);
-
-                EnumerateRecursive(root, ".", out cancelled);
-            }
-            finally
-            {
-                Flush();
-                e.Cancel = cancelled;
-
-                AutoResetEvent interlock = this.interlock;
-                this.interlock = null;
-                interlock.Close();
-            }
+            return Path.GetExtension(path);
         }
 
-        private void EnumerateRecursive(string root, string relative, out bool cancelled)
+        public Stream Open()
         {
-            currentPath = root;
-
-            cancelled = false;
-            foreach (string file in Directory.GetFiles(root))
-            {
-                if (CancellationPending)
-                {
-                    cancelled = true;
-                    return;
-                }
-
-                bool include;
-                {
-                    include = extensionsIncluded.Length == 0;
-                    string extension = Path.GetExtension(file).ToLowerInvariant();
-                    if (!include && (Array.IndexOf(extensionsIncluded, extension) >= 0))
-                    {
-                        include = true;
-                    }
-                    if (include && (Array.IndexOf(extensionsExcluded, extension) >= 0))
-                    {
-                        include = false;
-                    }
-                }
-
-                if (include)
-                {
-                    TestFile(file, relative);
-                }
-            }
-            foreach (string dir in Directory.GetDirectories(root))
-            {
-                if (CancellationPending)
-                {
-                    cancelled = true;
-                    return;
-                }
-                EnumerateRecursive(dir, Path.Combine(relative, Path.GetFileName(dir)), out cancelled);
-            }
+            return new FileStream(path, FileMode.Open, FileAccess.Read, FileShare.ReadWrite);
         }
 
-        private void TestFile(string path, string relativeRoot)
+        public override int GetHashCode()
         {
-            string displayPath = Path.Combine(relativeRoot, Path.GetFileName(path));
-            const string Prefix = @".\";
-            if (displayPath.StartsWith(Prefix))
-            {
-                displayPath = displayPath.Substring(Prefix.Length);
-            }
-
-            try
-            {
-                using (Stream stream = new FileStream(path, FileMode.Open, FileAccess.Read, FileShare.ReadWrite))
-                {
-                    using (TextReader reader = new StreamReader(stream, true/*detectEncoding*/))
-                    {
-                        int lineNumber = 0;
-                        string line;
-                        while ((line = reader.ReadLine()) != null)
-                        {
-                            lineNumber++;
-                            int i = -1;
-                            do
-                            {
-                                i = line.IndexOf(pattern, i + 1, caseSensitive ? StringComparison.CurrentCulture : StringComparison.CurrentCultureIgnoreCase);
-                                bool skip = false;
-                                if (matchWholeWords && (i >= 0))
-                                {
-                                    if (Char.IsLetterOrDigit(pattern[0]))
-                                    {
-                                        if ((i - 1 >= 0) && Char.IsLetterOrDigit(line[i - 1]))
-                                        {
-                                            skip = true;
-                                        }
-                                    }
-                                    if (Char.IsLetterOrDigit(pattern[pattern.Length - 1]))
-                                    {
-                                        if ((i + pattern.Length < line.Length)
-                                            && Char.IsLetterOrDigit(line[i + pattern.Length]))
-                                        {
-                                            skip = true;
-                                        }
-                                    }
-                                }
-                                if ((i >= 0) && !skip)
-                                {
-                                    SendResult(new FindInFilesEntry(path, displayPath, line, lineNumber, i, i + pattern.Length));
-                                }
-                            } while (i >= 0);
-                        }
-                    }
-                }
-            }
-            catch (Exception exception)
-            {
-                SendResult(new FindInFilesEntry(path, displayPath, String.Format("Unable to open: {0}", exception.Message), 0, 0, 0));
-            }
-
-            if (lastFlush.AddMilliseconds(250) < DateTime.UtcNow)
-            {
-                Flush();
-            }
+            return path.GetHashCode();
         }
 
-        private void Flush()
+        public override bool Equals(object obj)
         {
-            if (results.Count > 0)
+            FindInFilesItem other = obj as FindInFilesItem;
+            if (other == null)
             {
-                FindInFilesEntry[] entries = results.ToArray();
-                results.Clear();
-
-                ReportProgress(0, entries);
-
-                // Alas, BackgroundWorker is not quite the complete solution one was hoping for.
-                // It tends to swamp the message queue with events (since DataGridView for display is much
-                // slower than this is at finding items), causing the application to hang up. This
-                // event is used to interlock reporting of results so that search does not resume until
-                // the DataGridView has consumed all the changes just sent.
-                while (!CancellationPending)
-                {
-                    if (this.interlock.WaitOne(1000))
-                    {
-                        break;
-                    }
-                }
-
-                lastFlush = DateTime.UtcNow;
+                return false;
             }
-        }
-
-        private void SendResult(FindInFilesEntry entry)
-        {
-            results.Add(entry);
-            if (results.Count >= ChunkLength)
-            {
-                Flush();
-            }
+            return String.Equals(this.path, other.path);
         }
     }
 }

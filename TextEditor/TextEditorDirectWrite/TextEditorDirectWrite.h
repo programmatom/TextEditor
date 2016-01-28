@@ -30,206 +30,212 @@ using namespace System::Windows::Forms;
 
 namespace TextEditor
 {
-    //
+	//
 
-    [DllImport("dwrite.dll", EntryPoint="DWriteCreateFactory", SetLastError=true)]
-    extern HRESULT DWriteCreateFactory_(
-        DWRITE_FACTORY_TYPE factoryType,
-        IID iid,
-	    IUnknown** factory);
+	[DllImport("dwrite.dll", EntryPoint = "DWriteCreateFactory", SetLastError = true)]
+	extern HRESULT DWriteCreateFactory_(
+		DWRITE_FACTORY_TYPE factoryType,
+		IID iid,
+		IUnknown** factory);
 
-    [DllImport("gdi32.dll", EntryPoint="GetDeviceCaps", SetLastError=true)]
-    extern int GetDeviceCaps_(
-        HDC hdc,
-        int index);
+	[DllImport("gdi32.dll", EntryPoint = "GetDeviceCaps", SetLastError = true)]
+	extern int GetDeviceCaps_(
+		HDC hdc,
+		int index);
 
-    [DllImport("gdi32.dll", EntryPoint="BitBlt", SetLastError=true)]
-    extern bool BitBlt_(
-        HDC hdc,
-        int x,
-        int y,
-        int cx,
-        int cy,
-	    HDC hdcSrc,
-        int x1,
-        int y1,
-        int rop);
+	[DllImport("gdi32.dll", EntryPoint = "BitBlt", SetLastError = true)]
+	extern bool BitBlt_(
+		HDC hdc,
+		int x,
+		int y,
+		int cx,
+		int cy,
+		HDC hdcSrc,
+		int x1,
+		int y1,
+		int rop);
 
-    [DllImport("gdi32.dll", EntryPoint="DeleteObject", SetLastError=true)]
-    extern bool DeleteObject_(
-        HGDIOBJ hgdiobj);
+	[DllImport("gdi32.dll", EntryPoint = "DeleteObject", SetLastError = true)]
+	extern bool DeleteObject_(
+		HGDIOBJ hgdiobj);
 
-    [DllImport("gdi32.dll", EntryPoint="SelectClipRgn", SetLastError=true)]
-    extern int SelectClipRgn_(
-        HDC hdc,
-        HRGN hrgn);
-
-
-    //
-
-    public ref class TextServiceDirectWriteInterop
-    {
-    public:
-        IDWriteFactory* factory;
-
-	    IDWriteRenderingParams* renderingParams;
-
-	    IDWriteTextFormat* textFormat;
-
-	    int visibleWidth;
-        int lineHeight;
-        float baseline;
-        IDWriteBitmapRenderTarget* renderTarget; // contains offscreen strip
-        float rdpiX, rdpiY;
-
-    public:
-
-	    TextServiceDirectWriteInterop();
-
-	    ~TextServiceDirectWriteInterop();
-
-	    !TextServiceDirectWriteInterop();
-
-	    HRESULT Reset(
-            Font^ font,
-            int visibleWidth);
-
-	    void _Dispose();
-
-	    void ClearCaches();
-    };
+	[DllImport("gdi32.dll", EntryPoint = "SelectClipRgn", SetLastError = true)]
+	extern int SelectClipRgn_(
+		HDC hdc,
+		HRGN hrgn);
 
 
-    // 
- 
-    public ref class TextServiceLineDirectWriteInterop
-    {
-    private:
-	    TextServiceDirectWriteInterop^ service;
-	    IDWriteTextLayout* textLayout;
+	//
 
-	    int totalChars;
-	    COLORREF foreColor;
+	public ref class TextServiceDirectWriteInterop
+	{
+	public:
+		IDWriteFactory* factory;
 
-    public:
+		IDWriteRenderingParams* renderingParams;
 
-	    TextServiceLineDirectWriteInterop();
+		IDWriteTextFormat* textFormat;
 
-	    ~TextServiceLineDirectWriteInterop();
+		int visibleWidth;
+		int lineHeight;
+		float baseline;
+		IDWriteBitmapRenderTarget* renderTarget; // contains offscreen strip
+		float rdpiX, rdpiY;
 
-	    !TextServiceLineDirectWriteInterop();
+	public:
 
-	    HRESULT Init(
-		    TextServiceDirectWriteInterop^ service,
-		    String^ line);
+		TextServiceDirectWriteInterop();
 
-	    void _Dispose();
+		~TextServiceDirectWriteInterop();
 
-	    HRESULT DrawText(
-            Graphics^ graphics_,
-		    Point position,
-		    Color foreColor,
-		    Color backColor);
+		!TextServiceDirectWriteInterop();
 
-        HRESULT BuildRegion(
-            Graphics^ graphics,
-            Point position,
-            int startPos,
-            int endPosPlusOne,
-		    [Out] Region^ %regionOut);
+		HRESULT Reset(
+			Font^ font,
+			int visibleWidth);
 
-	    HRESULT GetExtent(
-		    Graphics^ graphics,
-		    [Out] Size %sizeOut);
+		void _Dispose();
 
-	    HRESULT CharPosToX(
-            Graphics^ graphics,
-            int offset,
-            bool trailing,
-            [Out] int %x);
-
-	    HRESULT XToCharPos(
-		    Graphics^ graphics,
-		    int x,
-		    [Out] int %offset,
-		    [Out] bool %trailing);
-    };
+		void ClearCaches();
+	};
 
 
-    //
+	// 
 
-    public class TextServiceLineDirectWriteInterop2 : /*public IUnknown, public IDWritePixelSnapping, */public IDWriteTextRenderer
-    {
-    private:
-	    long refCount;
-	    float rdpiY;
-	    IDWriteBitmapRenderTarget* renderTarget;
-	    IDWriteRenderingParams* renderingParams;
-	    COLORREF foreColor;
+	public ref class TextServiceLineDirectWriteInterop
+	{
+	private:
+		TextServiceDirectWriteInterop^ service;
+		IDWriteTextLayout* textLayout;
 
-    public:
+		int totalChars;
+		COLORREF foreColor;
 
-	    TextServiceLineDirectWriteInterop2();
+	public:
 
-	    HRESULT Init(
-		    float rdpiY,
-		    IDWriteBitmapRenderTarget* renderTarget,
-		    IDWriteRenderingParams* renderingParams,
-		    COLORREF foreColor);
+		TextServiceLineDirectWriteInterop();
+
+		~TextServiceLineDirectWriteInterop();
+
+		!TextServiceLineDirectWriteInterop();
+
+		HRESULT Init(
+			TextServiceDirectWriteInterop^ service,
+			String^ line);
+
+		void _Dispose();
+
+		HRESULT DrawText(
+			Graphics^ graphics_,
+			Point position,
+			Color foreColor,
+			Color backColor);
+
+		HRESULT DrawTextWithRenderTarget(
+			Graphics^ graphics,
+			System::Drawing::Rectangle bounds,
+			Color foreColor,
+			Color backColor);
+
+		HRESULT BuildRegion(
+			Graphics^ graphics,
+			Point position,
+			int startPos,
+			int endPosPlusOne,
+			[Out] Region^ %regionOut);
+
+		HRESULT GetExtent(
+			Graphics^ graphics,
+			[Out] Size %sizeOut);
+
+		HRESULT CharPosToX(
+			Graphics^ graphics,
+			int offset,
+			bool trailing,
+			[Out] int %x);
+
+		HRESULT XToCharPos(
+			Graphics^ graphics,
+			int x,
+			[Out] int %offset,
+			[Out] bool %trailing);
+	};
 
 
-	    unsigned long STDMETHODCALLTYPE AddRef();
+	//
 
-        unsigned long STDMETHODCALLTYPE Release();
+	public class TextServiceLineDirectWriteInterop2 : /*public IUnknown, public IDWritePixelSnapping, */public IDWriteTextRenderer
+	{
+	private:
+		long refCount;
+		float rdpiY;
+		IDWriteBitmapRenderTarget* renderTarget;
+		IDWriteRenderingParams* renderingParams;
+		COLORREF foreColor;
 
-        STDMETHOD(QueryInterface)(
-            IID const& riid,
-            void** ppvObject);
+	public:
+
+		TextServiceLineDirectWriteInterop2();
+
+		HRESULT Init(
+			float rdpiY,
+			IDWriteBitmapRenderTarget* renderTarget,
+			IDWriteRenderingParams* renderingParams,
+			COLORREF foreColor);
 
 
-	    STDMETHOD(IsPixelSnappingDisabled)(
-		    __maybenull void* clientDrawingContext,
-		    __out BOOL* isDisabled);
+		unsigned long STDMETHODCALLTYPE AddRef();
 
-	    STDMETHOD(GetCurrentTransform)(
-		    __maybenull void* clientDrawingContext,
-		    __out DWRITE_MATRIX* transform);
+		unsigned long STDMETHODCALLTYPE Release();
 
-	    STDMETHOD(GetPixelsPerDip)(
-		    __maybenull void* clientDrawingContext,
-		    __out FLOAT* pixelsPerDip);
+		STDMETHOD(QueryInterface)(
+			IID const& riid,
+			void** ppvObject);
 
 
-	    STDMETHOD(DrawGlyphRun)(
-		    __maybenull void* clientDrawingContext,
-		    FLOAT baselineOriginX,
-		    FLOAT baselineOriginY,
-		    DWRITE_MEASURING_MODE measuringMode,
-		    __in DWRITE_GLYPH_RUN const* glyphRun,
-		    __in DWRITE_GLYPH_RUN_DESCRIPTION const* glyphRunDescription,
-		    __maybenull IUnknown* clientDrawingEffect);
+		STDMETHOD(IsPixelSnappingDisabled)(
+			__maybenull void* clientDrawingContext,
+			__out BOOL* isDisabled);
 
-	    STDMETHOD(DrawUnderline)(
-		    __maybenull void* clientDrawingContext,
-		    FLOAT baselineOriginX,
-		    FLOAT baselineOriginY,
-		    __in DWRITE_UNDERLINE const* underline,
-		    __maybenull IUnknown* clientDrawingEffect);
+		STDMETHOD(GetCurrentTransform)(
+			__maybenull void* clientDrawingContext,
+			__out DWRITE_MATRIX* transform);
 
-	    STDMETHOD(DrawStrikethrough)(
-		    __maybenull void* clientDrawingContext,
-		    FLOAT baselineOriginX,
-		    FLOAT baselineOriginY,
-		    __in DWRITE_STRIKETHROUGH const* strikethrough,
-		    __maybenull IUnknown* clientDrawingEffect);
+		STDMETHOD(GetPixelsPerDip)(
+			__maybenull void* clientDrawingContext,
+			__out FLOAT* pixelsPerDip);
 
-	    STDMETHOD(DrawInlineObject)(
-		    __maybenull void* clientDrawingContext,
-		    FLOAT originX,
-		    FLOAT originY,
-		    IDWriteInlineObject* inlineObject,
-		    BOOL isSideways,
-		    BOOL isRightToLeft,
-		    __maybenull IUnknown* clientDrawingEffect);
-    };
+
+		STDMETHOD(DrawGlyphRun)(
+			__maybenull void* clientDrawingContext,
+			FLOAT baselineOriginX,
+			FLOAT baselineOriginY,
+			DWRITE_MEASURING_MODE measuringMode,
+			__in DWRITE_GLYPH_RUN const* glyphRun,
+			__in DWRITE_GLYPH_RUN_DESCRIPTION const* glyphRunDescription,
+			__maybenull IUnknown* clientDrawingEffect);
+
+		STDMETHOD(DrawUnderline)(
+			__maybenull void* clientDrawingContext,
+			FLOAT baselineOriginX,
+			FLOAT baselineOriginY,
+			__in DWRITE_UNDERLINE const* underline,
+			__maybenull IUnknown* clientDrawingEffect);
+
+		STDMETHOD(DrawStrikethrough)(
+			__maybenull void* clientDrawingContext,
+			FLOAT baselineOriginX,
+			FLOAT baselineOriginY,
+			__in DWRITE_STRIKETHROUGH const* strikethrough,
+			__maybenull IUnknown* clientDrawingEffect);
+
+		STDMETHOD(DrawInlineObject)(
+			__maybenull void* clientDrawingContext,
+			FLOAT originX,
+			FLOAT originY,
+			IDWriteInlineObject* inlineObject,
+			BOOL isSideways,
+			BOOL isRightToLeft,
+			__maybenull IUnknown* clientDrawingEffect);
+	};
 }

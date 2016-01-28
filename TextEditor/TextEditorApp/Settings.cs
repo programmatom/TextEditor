@@ -74,24 +74,6 @@ namespace TextEditor
         }
     }
 
-    public struct SearchCombos
-    {
-        public string[] items;
-        public string last;
-
-        public SearchCombos(string[] items, string last)
-        {
-            this.items = items;
-            this.last = last;
-        }
-
-        public SearchCombos(SearchCombos orig)
-        {
-            this.items = orig.items;
-            this.last = orig.last;
-        }
-    }
-
     public class EditorConfigList
     {
         private List<EditorConfig> configs = new List<EditorConfig>();

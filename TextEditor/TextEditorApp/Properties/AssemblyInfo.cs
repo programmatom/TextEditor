@@ -26,11 +26,11 @@ using System.Runtime.InteropServices;
 // General Information about an assembly is controlled through the following 
 // set of attributes. Change these attribute values to modify the information
 // associated with an assembly.
-[assembly: AssemblyTitle("TextEditor")]
+[assembly: AssemblyTitle("Text Editor")]
 [assembly: AssemblyDescription("")]
 [assembly: AssemblyConfiguration("")]
 [assembly: AssemblyCompany("")]
-[assembly: AssemblyProduct("TextEditor")]
+[assembly: AssemblyProduct("Text Editor")]
 [assembly: AssemblyCopyright("Copyright © 2015 Thomas R. Lawrence")]
 [assembly: AssemblyTrademark("")]
 [assembly: AssemblyCulture("")]

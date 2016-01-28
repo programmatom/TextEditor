@@ -342,4 +342,124 @@ namespace TextEditor
             }
         }
     }
+
+    // A rather incomplete wrapper around DirectWrite that provides functions matching what TextRenderer provides.
+    public static class DirectWriteTextRenderer
+    {
+        private static TextServiceDirectWriteInterop interop;
+        private static Font lastFont;
+        private static int lastWidth;
+
+        private static void EnsureInterop(Font font)
+        {
+            if (interop == null)
+            {
+                interop = new TextServiceDirectWriteInterop();
+            }
+            if ((lastFont != font) || (lastWidth != Screen.PrimaryScreen.Bounds.Width))
+            {
+                lastFont = font;
+                lastWidth = Screen.PrimaryScreen.Bounds.Width;
+                interop.Reset(lastFont, lastWidth);
+            }
+        }
+
+        public static void DrawText(Graphics graphics, string text, Font font, Point pt, Color foreColor)
+        {
+            DrawText(graphics, text, font, new Rectangle(pt, MeasureText(graphics, text, font)), foreColor, Color.Transparent, TextFormatFlags.Default);
+        }
+
+        public static void DrawText(Graphics graphics, string text, Font font, Rectangle bounds, Color foreColor)
+        {
+            DrawText(graphics, text, font, bounds, foreColor, Color.Transparent, TextFormatFlags.Default);
+        }
+
+        public static void DrawText(Graphics graphics, string text, Font font, Point pt, Color foreColor, Color backColor)
+        {
+            DrawText(graphics, text, font, new Rectangle(pt, MeasureText(graphics, text, font)), foreColor, backColor, TextFormatFlags.Default);
+        }
+
+        public static void DrawText(Graphics graphics, string text, Font font, Point pt, Color foreColor, TextFormatFlags flags)
+        {
+            DrawText(graphics, text, font, new Rectangle(pt, MeasureText(graphics, text, font)), foreColor, Color.Transparent, flags);
+        }
+
+        public static void DrawText(Graphics graphics, string text, Font font, Rectangle bounds, Color foreColor, Color backColor)
+        {
+            DrawText(graphics, text, font, bounds, foreColor, backColor, TextFormatFlags.Default);
+        }
+
+        public static void DrawText(Graphics graphics, string text, Font font, Rectangle bounds, Color foreColor, TextFormatFlags flags)
+        {
+            DrawText(graphics, text, font, bounds, foreColor, Color.Transparent, flags);
+        }
+
+        public static void DrawText(Graphics graphics, string text, Font font, Point pt, Color foreColor, Color backColor, TextFormatFlags flags)
+        {
+            DrawText(graphics, text, font, new Rectangle(pt, MeasureText(graphics, text, font)), foreColor, backColor, flags);
+        }
+
+        public static void DrawText(Graphics graphics, string text, Font font, Rectangle bounds, Color foreColor, Color backColor, TextFormatFlags flags)
+        {
+            EnsureInterop(font);
+
+            using (TextServiceLineDirectWriteInterop lineInterop = new TextServiceLineDirectWriteInterop())
+            {
+                int hr = lineInterop.Init(interop, text);
+                if (hr < 0)
+                {
+                    Marshal.ThrowExceptionForHR(hr);
+                }
+                if ((flags & TextFormatFlags.HorizontalCenter) != 0)
+                {
+                    Size size;
+                    hr = lineInterop.GetExtent(graphics, out size);
+                    if (hr < 0)
+                    {
+                        Marshal.ThrowExceptionForHR(hr);
+                    }
+                    bounds.X += (bounds.Width - size.Width) / 2;
+                    bounds.Width += size.Width / 2;
+                }
+                lineInterop.DrawTextWithRenderTarget(graphics, bounds, foreColor, backColor);
+            }
+        }
+
+        //public static Size MeasureText(string text, Font font);
+
+        public static Size MeasureText(Graphics graphics, string text, Font font)
+        {
+            EnsureInterop(font);
+
+            using (TextServiceLineDirectWriteInterop lineInterop = new TextServiceLineDirectWriteInterop())
+            {
+                int hr = lineInterop.Init(interop, text);
+                if (hr < 0)
+                {
+                    Marshal.ThrowExceptionForHR(hr);
+                }
+                Size extent;
+                hr = lineInterop.GetExtent(graphics, out extent);
+                if (hr < 0)
+                {
+                    Marshal.ThrowExceptionForHR(hr);
+                }
+                return extent;
+            }
+        }
+
+        //public static Size MeasureText(string text, Font font, Size proposedSize);
+
+        public static Size MeasureText(Graphics graphics, string text, Font font, Size proposedSize)
+        {
+            return MeasureText(graphics, text, font);
+        }
+
+        //public static Size MeasureText(string text, Font font, Size proposedSize, TextFormatFlags flags);
+
+        public static Size MeasureText(Graphics graphics, string text, Font font, Size proposedSize, TextFormatFlags flags)
+        {
+            return MeasureText(graphics, text, font);
+        }
+    }
 }

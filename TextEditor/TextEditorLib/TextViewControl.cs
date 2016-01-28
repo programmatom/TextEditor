@@ -38,7 +38,7 @@ namespace TextEditor
     // change event.
 
     [DefaultBindingProperty("Text"), DefaultEvent("TextChanged")]
-    public partial class TextViewControl : UserControl
+    public partial class TextViewControl : ScrollableControl
     {
         private ITextStorageFactory textStorageFactory;
         private ITextStorage textStorage;
@@ -322,6 +322,33 @@ namespace TextEditor
             }
         }
 
+        [Browsable(false), DesignerSerializationVisibility(DesignerSerializationVisibility.Hidden)]
+        public Form ParentForm { get { return FindFormInternal(); } }
+
+        private Form FindFormInternal() // taken from .NET source
+        {
+            Control current = this;
+            while ((current != null) && !(current is Form))
+            {
+                current = current.Parent;
+            }
+            return (Form)current;
+        }
+
+        // override to re-expose AutoSize
+        [Browsable(true), Category("Layout"), DefaultValue(false), EditorBrowsable(EditorBrowsableState.Always), DesignerSerializationVisibility(DesignerSerializationVisibility.Visible)]
+        public override bool AutoSize
+        {
+            get
+            {
+                return base.AutoSize;
+            }
+            set
+            {
+                base.AutoSize = value;
+            }
+        }
+
 
         // Internal layout/draw methods
 
@@ -329,7 +356,20 @@ namespace TextEditor
 
         protected int ClientHeight { get { return ClientSize.Height; } }
 
-        // compute exact width and height of canvas
+        private void RecomputeCanvasSizeForAutoSize()
+        {
+            Debug.Assert(AutoSize);
+
+            currentWidth = 0; // allow shrink
+            RecomputeCanvasSizePartialHelper(0, textStorage.Count, false/*includeClientWidthAndOverflow*/);
+
+            Size size = new Size(currentWidth, FontHeight * textStorage.Count);
+            if (this.Size != size)
+            {
+                this.Size = size; // constraint to MinimumSize taken care of by .NET base class
+            }
+        }
+
         private void RecomputeCanvasSize()
         {
             if (textStorageFactory == null)
@@ -339,6 +379,12 @@ namespace TextEditor
             ValidateHardened();
 
             currentWidth = 0;
+
+            if (AutoSize)
+            {
+                RecomputeCanvasSizeForAutoSize();
+                return;
+            }
 
             const bool Exact = false; // Exact is too slow for large files
             if (Exact)
@@ -409,6 +455,19 @@ namespace TextEditor
         // always sets correct height of canvas.
         private void RecomputeCanvasSizePartial(int startLine, int endLine)
         {
+            if (AutoSize)
+            {
+                RecomputeCanvasSizeForAutoSize();
+            }
+            else
+            {
+                RecomputeCanvasSizePartialHelper(startLine, endLine, true/*includeClientWidthAndOverflow*/);
+            }
+        }
+
+        // do not call this method directly, use RecomputeCanvasSizePartial() instead
+        private void RecomputeCanvasSizePartialHelper(int startLine, int endLine, bool includeClientWidthAndOverflow)
+        {
             if (textStorageFactory == null)
             {
                 return;
@@ -420,7 +479,7 @@ namespace TextEditor
                 // add some margin for two reasons: First, Graphics.DrawString seems to omit the last character if the bounding
                 // rect is too tight, even if .NoClip and .NoWrap are set in the formatting style. Second, it gives some
                 // extra space for the IP on the edge and feels more comfortable to use.
-                int horizontalOverflow = fontHeight;
+                int horizontalOverflow = includeClientWidthAndOverflow ? fontHeight : 1;
 
                 for (int i = Math.Max(startLine, 0); i <= Math.Min(endLine, this.Count - 1); i++)
                 {
@@ -435,7 +494,10 @@ namespace TextEditor
                     }
                     currentWidth = Math.Max(currentWidth, width);
                 }
-                currentWidth = Math.Max(currentWidth, ClientWidth);
+                if (includeClientWidthAndOverflow)
+                {
+                    currentWidth = Math.Max(currentWidth, ClientWidth);
+                }
                 AutoScrollMinSize = new Size(currentWidth, textStorage.Count * fontHeight);
                 if ((offscreenStrip != null) && (ClientWidth > offscreenStrip.Width))
                 {
@@ -841,39 +903,27 @@ namespace TextEditor
                 }
                 /* now we have the column index, with tabs expanded; we have to figure */
                 /* out what the character index is, with tabs left intact */
-                int charIndexLowBound = 0;
-                int charIndexHighBound = columnIndex; /* tabs never reduce to FEWER spaces! */
-                /* test for convergence again... */
-                while (charIndexLowBound < charIndexHighBound)
+                using (IDecodedTextLine decodedLine = textStorage[lineIndex].Decode_MustDispose())
                 {
-                    int midPoint;
-                    int midColumnIndex;
-
-                    midPoint = (charIndexLowBound + charIndexHighBound) / 2;
-                    midColumnIndex = GetColumnFromCharIndex(lineIndex, midPoint);
-                    if (midColumnIndex < columnIndex)
+                    int index = 0;
+                    int column = 0;
+                    while (column < columnIndex)
                     {
-                        if (charIndexLowBound == midPoint)
+                        Debug.Assert(index < decodedLine.Length);
+                        int width = 1;
+                        if (decodedLine.Value[index] == '\t')
                         {
-                            charIndexLowBound = midPoint + 1;
+                            width = spacesPerTab - (column % spacesPerTab);
+                            if (!(column + width / 2 < columnIndex))
+                            {
+                                break;
+                            }
                         }
-                        else
-                        {
-                            charIndexLowBound = midPoint;
-                        }
+                        index++;
+                        column += width;
                     }
-                    else if (midColumnIndex > columnIndex)
-                    {
-                        charIndexHighBound = midPoint;
-                    }
-                    else /* they're the same */
-                    {
-                        charIndexLowBound = midPoint;
-                        charIndexHighBound = midPoint;
-                    }
+                    return index;
                 }
-
-                return charIndexLowBound;
             }
         }
 
@@ -1492,57 +1542,53 @@ namespace TextEditor
             }
         }
 
-        public void ScrollToSelection()
+        private void ScrollTo(int startLine, int startChar, int endLine, int endCharPlusOne)
         {
             using (Graphics graphics = CreateGraphics())
             {
-                int check;
-
                 /* figure out how much space to leave at bottom and top edges */
-                check = 4 * fontHeight;
-                while ((check > 0) && (ClientHeight < check * 2 + 4 * fontHeight))
-                {
-                    check -= 1;
-                }
+                int check = Math.Min(4 * fontHeight, Math.Max(ClientHeight / 2 - 4 * fontHeight, 0));
 
                 /* vertical adjustment */
-                if (((selectStartLine * fontHeight >= -AutoScrollPosition.Y + check)
-                        && (selectStartLine < -AutoScrollPosition.Y + (textStorage.Count * fontHeight - check - 1)))
-                    || ((selectStartLine * fontHeight < check)
-                        && (selectStartLine * fontHeight >= -AutoScrollPosition.Y)))
+                if (((startLine * fontHeight >= -AutoScrollPosition.Y + check)
+                        && (startLine < -AutoScrollPosition.Y + (textStorage.Count * fontHeight - check - 1)))
+                    || ((startLine * fontHeight < check)
+                        && (startLine * fontHeight >= -AutoScrollPosition.Y))
+                    || (ClientHeight < FontHeight))
                 {
                     /* beginning of selection is in the box, so try to center the end */
-                    if (selectEndLine * fontHeight < -AutoScrollPosition.Y + check)
+                    if ((endLine * fontHeight < -AutoScrollPosition.Y + check)
+                        || (ClientHeight < FontHeight))
                     {
                         /* selection is too far up */
                         AutoScrollPosition = new Point(
                             -AutoScrollPosition.X,
-                            selectEndLine * fontHeight - check);
+                            endLine * fontHeight - check);
                     }
-                    if (selectEndLine * fontHeight >= -AutoScrollPosition.Y + (ClientHeight - check - 1))
+                    else if (endLine * fontHeight >= -AutoScrollPosition.Y + (ClientHeight - fontHeight - check - 1))
                     {
                         /* selection is too far down */
                         AutoScrollPosition = new Point(
                             -AutoScrollPosition.X,
-                            selectEndLine * fontHeight - (ClientHeight - check - 1) + 1);
+                            endLine * fontHeight - (ClientHeight - fontHeight - check - 1) + 1);
                     }
                 }
                 else
                 {
                     /* center the beginning in the box */
-                    if (selectStartLine * fontHeight < -AutoScrollPosition.Y + check)
+                    if (startLine * fontHeight < -AutoScrollPosition.Y + check)
                     {
                         /* selection is to far up */
                         AutoScrollPosition = new Point(
                             -AutoScrollPosition.X,
-                            selectStartLine * fontHeight - check);
+                            startLine * fontHeight - check);
                     }
-                    if (selectStartLine * fontHeight >= -AutoScrollPosition.Y + (ClientHeight - check - 1))
+                    else if (startLine * fontHeight >= -AutoScrollPosition.Y + (ClientHeight - check - 1))
                     {
                         /* selection is too far down */
                         AutoScrollPosition = new Point(
                             -AutoScrollPosition.X,
-                            selectStartLine * fontHeight - (ClientHeight - check - 1) + 1);
+                            startLine * fontHeight - (ClientHeight - check - 1) + 1);
                     }
                 }
 
@@ -1551,29 +1597,25 @@ namespace TextEditor
                     (-AutoScrollPosition.Y + ClientHeight + fontHeight - 1) / fontHeight);
 
                 /* figure out how much space on left and right edges to leave */
-                check = 32;
-                while ((check > 0) && (ClientWidth < check * 4 + 16))
-                {
-                    check -= 1;
-                }
+                check = Math.Min(32, Math.Max(ClientWidth / 2 - 32, 0));
 
                 /* horizontal adjustment */
-                if (!SelectionNonEmpty)
+                if ((startLine == endLine) && (startChar == endCharPlusOne))
                 {
                     /* only adjust left-to-right if it's an insertion point */
-                    if (ScreenXFromCharIndex(graphics, selectStartLine, selectStartChar)
+                    if (ScreenXFromCharIndex(graphics, startLine, startChar)
                         < -AutoScrollPosition.X + check)
                     {
                         AutoScrollPosition = new Point(
-                            (int)ScreenXFromCharIndex(graphics, selectStartLine, selectStartChar)
+                            (int)ScreenXFromCharIndex(graphics, startLine, startChar)
                                 - (2 * check),
                             -AutoScrollPosition.Y);
                     }
-                    if (ScreenXFromCharIndex(graphics, selectStartLine, selectStartChar)
+                    if (ScreenXFromCharIndex(graphics, startLine, startChar)
                         > -AutoScrollPosition.X + ClientWidth - check)
                     {
                         AutoScrollPosition = new Point(
-                            (int)ScreenXFromCharIndex(graphics, selectStartLine, selectStartChar)
+                            (int)ScreenXFromCharIndex(graphics, startLine, startChar)
                                 - ClientWidth + (2 * check),
                             -AutoScrollPosition.Y);
                     }
@@ -1583,131 +1625,19 @@ namespace TextEditor
             Update();
         }
 
+        public void ScrollToSelection()
+        {
+            ScrollTo(selectStartLine, selectStartChar, selectEndLine, selectEndCharPlusOne);
+        }
+
         public void ScrollToSelectionStartEdge()
         {
-            using (Graphics graphics = CreateGraphics())
-            {
-                int check;
-
-                /* figure out how much space to leave at bottom and top edges */
-                check = 4 * fontHeight;
-                while ((check > 0) && (ClientHeight < check * 2 + 4 * fontHeight))
-                {
-                    check -= 1;
-                }
-
-                /* vertical adjustment */
-                /* center the beginning in the box */
-                if (selectStartLine * fontHeight < -AutoScrollPosition.Y + check)
-                {
-                    /* selection is to far up */
-                    AutoScrollPosition = new Point(
-                        -AutoScrollPosition.X,
-                        selectStartLine * fontHeight - check);
-                }
-                if (selectStartLine * fontHeight >= -AutoScrollPosition.Y + (ClientHeight - check - 1))
-                {
-                    /* selection is too far down */
-                    AutoScrollPosition = new Point(
-                        -AutoScrollPosition.X,
-                        selectStartLine * fontHeight - (ClientHeight - check - 1) + 1);
-                }
-
-                RecomputeCanvasSizePartial(
-                    -AutoScrollPosition.Y / fontHeight,
-                    (-AutoScrollPosition.Y + ClientHeight + fontHeight - 1) / fontHeight);
-
-                /* figure out how much space on left and right edges to leave */
-                check = 32;
-                while ((check > 0) && (ClientWidth < check * 4 + 16))
-                {
-                    check -= 1;
-                }
-
-                /* horizontal adjustment */
-                if (ScreenXFromCharIndex(graphics, selectStartLine, selectStartChar)
-                    < -AutoScrollPosition.X + check)
-                {
-                    AutoScrollPosition = new Point(
-                        (int)ScreenXFromCharIndex(graphics, selectStartLine, selectStartChar)
-                            - (2 * check),
-                        -AutoScrollPosition.Y);
-                }
-                if (ScreenXFromCharIndex(graphics, selectStartLine, selectStartChar)
-                    > -AutoScrollPosition.X + ClientWidth - check)
-                {
-                    AutoScrollPosition = new Point(
-                        (int)ScreenXFromCharIndex(graphics, selectStartLine, selectStartChar)
-                            - ClientWidth + (2 * check),
-                        -AutoScrollPosition.Y);
-                }
-            }
-
-            Update();
+            ScrollTo(selectStartLine, selectStartChar, selectStartLine, selectStartChar);
         }
 
         public void ScrollToSelectionEndEdge()
         {
-            using (Graphics graphics = CreateGraphics())
-            {
-                int check;
-
-                /* figure out how much space to leave at bottom and top edges */
-                check = 4 * fontHeight;
-                while ((check > 0) && (ClientHeight < check * 2 + 4 * fontHeight))
-                {
-                    check -= 1;
-                }
-
-                /* vertical adjustment */
-                /* try to center the end */
-                if (selectEndLine * fontHeight < -AutoScrollPosition.Y + check)
-                {
-                    /* selection is to far up */
-                    AutoScrollPosition = new Point(
-                        -AutoScrollPosition.X,
-                        selectEndLine * fontHeight - check);
-                }
-                if (selectEndLine * fontHeight >= -AutoScrollPosition.Y + (ClientHeight - check - 1))
-                {
-                    /* selection is too far down */
-                    AutoScrollPosition = new Point(
-                        -AutoScrollPosition.X,
-                        selectEndLine * fontHeight - (ClientHeight - check - 1) + 1);
-                }
-
-                RecomputeCanvasSizePartial(
-                    -AutoScrollPosition.Y / fontHeight,
-                    (-AutoScrollPosition.Y + ClientHeight + fontHeight - 1) / fontHeight);
-
-                /* figure out how much space on left and right edges to leave */
-                check = 32;
-                while ((check > 0)
-                    && (ClientWidth < check * 4 + 16))
-                {
-                    check -= 1;
-                }
-
-                /* horizontal adjustment */
-                if (ScreenXFromCharIndex(graphics, selectEndLine, selectEndCharPlusOne)
-                    < -AutoScrollPosition.X + check)
-                {
-                    AutoScrollPosition = new Point(
-                        (int)ScreenXFromCharIndex(graphics, selectEndLine, selectEndCharPlusOne)
-                            - (2 * check),
-                        -AutoScrollPosition.Y);
-                }
-                if (ScreenXFromCharIndex(graphics, selectEndLine, selectEndCharPlusOne)
-                    > -AutoScrollPosition.X + ClientWidth - check)
-                {
-                    AutoScrollPosition = new Point(
-                        (int)ScreenXFromCharIndex(graphics, selectEndLine, selectEndCharPlusOne)
-                            - ClientWidth + (2 * check),
-                        -AutoScrollPosition.Y);
-                }
-            }
-
-            Update();
+            ScrollTo(selectEndLine, selectEndCharPlusOne, selectEndLine, selectEndCharPlusOne);
         }
 
         public void ScrollToSelectionActiveEnd()
@@ -1757,6 +1687,10 @@ namespace TextEditor
             if (textStorageFactory == null)
             {
                 return;
+            }
+            if (!Focused)
+            {
+                Focus();
             }
 
             timerCursorBlink.Stop();
@@ -1829,7 +1763,7 @@ namespace TextEditor
 
                 /* enter the selection tracking loop */
                 // Old Macintosh program used local modal event pump.
-                MouseEventHandler mouseMove = new MouseEventHandler(delegate(object sender, MouseEventArgs ee)
+                MouseEventHandler mouseMove = new MouseEventHandler(delegate (object sender, MouseEventArgs ee)
                 {
                     TextViewControl_MouseMoveCapture_SelectionLocalLoopBody(
                         sender,

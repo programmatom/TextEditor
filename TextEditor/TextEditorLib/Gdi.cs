@@ -345,10 +345,10 @@ namespace TextEditor
 
     public class GraphicsHDC : IDisposable
     {
-        private readonly Graphics graphics;
+        private readonly IDeviceContext graphics;
         private readonly IntPtr h;
 
-        public GraphicsHDC(Graphics graphics)
+        public GraphicsHDC(IDeviceContext graphics)
         {
             this.graphics = graphics;
             this.h = graphics.GetHdc();

@@ -1,11 +1,15 @@
 # application compilation intermediate files
 
+/TextEditor/.vs/*
 /TextEditor/TextEditor.ncb
 /TextEditor/TextEditor.suo
+/TextEditor/TextEditorApp/bin/*/*.vshost.*
 /TextEditor/TextEditorApp/obj/*
+/TextEditor/TextEditorApp/*.user
 /TextEditor/TextEditorDirectWrite/x64/*
-/TextEditor/TextEditorDirectWrite/*.vcproj.*.user
+/TextEditor/TextEditorDirectWrite/*.user
 /TextEditor/TextEditorLib/obj/*
+/TextEditor/TextEditorLib/*.user
 
 # local utility scripts, etc.
 

@@ -31,7 +31,7 @@ using System.Windows.Forms;
 
 namespace TextEditor
 {
-    public partial class TextEditorWindow : Form
+    public partial class TextEditorWindow : Form, IFindInFilesWindow
     {
         private static readonly Encoding Encoding_ANSI = new ANSIEncoding();
         private static readonly Encoding Encoding_UTF8 = new UTF8Encoding(false/*encoderShouldEmitUTF8Identifier*/);
@@ -65,7 +65,15 @@ namespace TextEditor
                 this.textEditControl.TextStorageFactory = GetBackingStore(MainClass.Config.BackingStore);
             }
 
-            textEditControl.TextService = MainClass.Config.TextService;
+            try
+            {
+                textEditControl.TextService = MainClass.Config.TextService;
+            }
+            catch (FileNotFoundException exception)
+            {
+                MessageBox.Show(String.Format("Unable to load program component. To solve this problem, make sure the Visual Studio 2015 Redistributable is installed on the computer. (Internal exception: {0})", exception.Message));
+                throw;
+            }
             textEditControl.Font = config.Font;
             textEditControl.TabSize = config.TabSize;
             textEditControl.AutoIndent = config.AutoIndent;
@@ -291,7 +299,7 @@ namespace TextEditor
                 }
                 if (permittedEncodings != null)
                 {
-                    if (Array.FindIndex(permittedEncodings, delegate(Type candidate) { return candidate.IsInstanceOfType(encodingInfo.Encoding); }) < 0)
+                    if (Array.FindIndex(permittedEncodings, delegate (Type candidate) { return candidate.IsInstanceOfType(encodingInfo.Encoding); }) < 0)
                     {
                         MessageBox.Show("Specified encoding is not permitted by specified backing store. Falling back to 'String' backing store.", "Text Editor", MessageBoxButtons.OK, MessageBoxIcon.Information);
                         TextEditorWindow replacementWindow = new TextEditorWindow(false/*createBackingStore*/);
@@ -863,7 +871,7 @@ namespace TextEditor
         {
             OpenNewOrExistingWindowPattern(
                 null,
-                delegate(TextEditorWindow window, string path)
+                delegate (TextEditorWindow window, string path)
                 {
                     window.LoadFile(path);
                 });
@@ -873,7 +881,7 @@ namespace TextEditor
         {
             OpenNewOrExistingWindowPattern(
                 "Open ANSI Encoded",
-                delegate(TextEditorWindow window, string path)
+                delegate (TextEditorWindow window, string path)
                 {
                     window.LoadFile(path, new EncodingInfo(Encoding_ANSI, 0));
                 });
@@ -883,7 +891,7 @@ namespace TextEditor
         {
             OpenNewOrExistingWindowPattern(
                 "Open UTF-8 Encoded",
-                delegate(TextEditorWindow window, string path)
+                delegate (TextEditorWindow window, string path)
                 {
                     window.LoadFile(path, new EncodingInfo(Encoding_UTF8, 0));
                 });
@@ -893,7 +901,7 @@ namespace TextEditor
         {
             OpenNewOrExistingWindowPattern(
                 "Open UTF-16 Encoded",
-                delegate(TextEditorWindow window, string path)
+                delegate (TextEditorWindow window, string path)
                 {
                     window.LoadFile(path, new EncodingInfo(Encoding_UTF16, 0));
                 });
@@ -903,7 +911,7 @@ namespace TextEditor
         {
             OpenNewOrExistingWindowPattern(
                 "Open UTF-16 Big Endian Encoded",
-                delegate(TextEditorWindow window, string path)
+                delegate (TextEditorWindow window, string path)
                 {
                     window.LoadFile(path, new EncodingInfo(Encoding_UTF16BigEndian, 0));
                 });
@@ -1108,13 +1116,23 @@ namespace TextEditor
 
         private void findInFilesToolStripMenuItem_Click(object sender, EventArgs e)
         {
-            new FindInFiles().Show();
+            new FindInFiles(new FindInFilesApplication(), true/*showPathAndExtensions*/, "Find in Files").Show();
         }
 
         public void SetSelection(int startLine, int startChar, int endLine, int endCharP1)
         {
             textEditControl.SetSelection(startLine, startChar, endLine, endCharP1);
             textEditControl.ScrollToSelection();
+        }
+
+        public void SetSelection(IFindInFilesItem item, int startLine, int startChar, int endLine, int endCharP1)
+        {
+            SetSelection(startLine, startChar, endLine, endCharP1);
+        }
+
+        private void testInlineModeToolStripMenuItem_Click(object sender, EventArgs e)
+        {
+            new TestInlineMode().Show();
         }
     }
 }
