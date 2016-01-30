@@ -7,7 +7,6 @@
 /TextEditor/TextEditorApp/obj/*
 /TextEditor/TextEditorApp/*.user
 /TextEditor/TextEditorDirectWrite/x64/*
-/TextEditor/TextEditorDirectWrite/x64/*/*.metagen
 /TextEditor/TextEditorDirectWrite/*.user
 /TextEditor/TextEditorLib/obj/*
 /TextEditor/TextEditorLib/*.user
