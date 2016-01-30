@@ -3,9 +3,10 @@
 /TextEditor/.vs/*
 /TextEditor/TextEditor.ncb
 /TextEditor/TextEditor.suo
-/TextEditor/TextEditorApp/bin/*/*.vshost.*
+/TextEditor/TextEditorApp/bin/*/*/*.vshost.*
 /TextEditor/TextEditorApp/obj/*
 /TextEditor/TextEditorApp/*.user
+/TextEditor/TextEditorDirectWrite/Win32/*
 /TextEditor/TextEditorDirectWrite/x64/*
 /TextEditor/TextEditorDirectWrite/*.user
 /TextEditor/TextEditorLib/obj/*

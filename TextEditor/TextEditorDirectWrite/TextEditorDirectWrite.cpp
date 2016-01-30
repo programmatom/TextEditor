@@ -75,7 +75,7 @@ namespace TextEditor
 		if (this->factory == NULL)
 		{
 			IDWriteFactory* factory;
-			hr = DWriteCreateFactory_(
+			hr = DWriteCreateFactory(
 				DWRITE_FACTORY_TYPE_ISOLATED,
 				__uuidof(IDWriteFactory),
 				reinterpret_cast<IUnknown**>(&factory));
@@ -169,8 +169,8 @@ namespace TextEditor
 		// code and then imposed upon this code - on non-standard devices text would overflow line or be too small.
 #endif
 		HDC hdcScreen = GetDC(NULL);
-		int dpiX = GetDeviceCaps_(hdcScreen, LOGPIXELSX);
-		int dpiY = GetDeviceCaps_(hdcScreen, LOGPIXELSY);
+		int dpiX = GetDeviceCaps(hdcScreen, LOGPIXELSX);
+		int dpiY = GetDeviceCaps(hdcScreen, LOGPIXELSY);
 		rdpiX = dpiX / (float)96; // TODO: figure out correct thing to put here
 		rdpiY = dpiY / (float)96; // TODO: figure out correct thing to put here
 		hr = renderTarget->SetPixelsPerDip(rdpiY);
@@ -411,7 +411,7 @@ namespace TextEditor
 			try
 			{
 				// Graphics/GDI+ doesn't pass clip region through so we have to reset it explicitly
-				SelectClipRgn_(hdc, hrgnClip);
+				SelectClipRgn(hdc, hrgnClip);
 
 				HDC hdcMem = service->renderTarget->GetMemoryDC();
 
@@ -459,7 +459,7 @@ namespace TextEditor
 					goto Error;
 				}
 
-				BitBlt_(
+				BitBlt(
 					hdc,
 					0,
 					0,
@@ -477,7 +477,7 @@ namespace TextEditor
 		}
 		finally
 		{
-			DeleteObject_(hrgnClip);
+			DeleteObject(hrgnClip);
 		}
 
 	Error:
@@ -509,13 +509,13 @@ namespace TextEditor
 			try
 			{
 				// Graphics/GDI+ doesn't pass clip region through so we have to reset it explicitly
-				SelectClipRgn_(hdc, hrgnClip);
+				SelectClipRgn(hdc, hrgnClip);
 
 				HDC hdcMem = service->renderTarget->GetMemoryDC();
 
 				if (backColor == Color::Transparent)
 				{
-					BitBlt_(
+					BitBlt(
 						hdcMem,
 						0,
 						0,
@@ -573,7 +573,7 @@ namespace TextEditor
 					goto Error;
 				}
 
-				BitBlt_(
+				BitBlt(
 					hdc,
 					bounds.Left,
 					bounds.Top,
@@ -591,7 +591,7 @@ namespace TextEditor
 		}
 		finally
 		{
-			DeleteObject_(hrgnClip);
+			DeleteObject(hrgnClip);
 		}
 
 	Error:

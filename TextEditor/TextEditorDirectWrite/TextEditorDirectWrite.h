@@ -32,41 +32,6 @@ namespace TextEditor
 {
 	//
 
-	[DllImport("dwrite.dll", EntryPoint = "DWriteCreateFactory", SetLastError = true)]
-	extern HRESULT DWriteCreateFactory_(
-		DWRITE_FACTORY_TYPE factoryType,
-		IID iid,
-		IUnknown** factory);
-
-	[DllImport("gdi32.dll", EntryPoint = "GetDeviceCaps", SetLastError = true)]
-	extern int GetDeviceCaps_(
-		HDC hdc,
-		int index);
-
-	[DllImport("gdi32.dll", EntryPoint = "BitBlt", SetLastError = true)]
-	extern bool BitBlt_(
-		HDC hdc,
-		int x,
-		int y,
-		int cx,
-		int cy,
-		HDC hdcSrc,
-		int x1,
-		int y1,
-		int rop);
-
-	[DllImport("gdi32.dll", EntryPoint = "DeleteObject", SetLastError = true)]
-	extern bool DeleteObject_(
-		HGDIOBJ hgdiobj);
-
-	[DllImport("gdi32.dll", EntryPoint = "SelectClipRgn", SetLastError = true)]
-	extern int SelectClipRgn_(
-		HDC hdc,
-		HRGN hrgn);
-
-
-	//
-
 	public ref class TextServiceDirectWriteInterop
 	{
 	public:

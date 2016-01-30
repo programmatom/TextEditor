@@ -213,15 +213,15 @@ namespace TextEditor
         }
 
         public delegate int FONTENUMPROC(
-            [In, MarshalAs(UnmanagedType.Struct)] ENUMLOGFONTEX lpelfe,
-            [In, MarshalAs(UnmanagedType.Struct)] NEWTEXTMETRIC lpntme,
+            [In, MarshalAs(UnmanagedType.Struct)] ref ENUMLOGFONTEX lpelfe,
+            [In, MarshalAs(UnmanagedType.Struct)] ref NEWTEXTMETRIC lpntme,
             int FontType,
             int lParam);
 
         [DllImport("gdi32.dll", SetLastError = true, CharSet = CharSet.Unicode)]
         public static extern int EnumFontFamiliesEx(
             IntPtr hdc,
-            [In, MarshalAs(UnmanagedType.Struct)] LOGFONT lpLogfont,
+            [In, MarshalAs(UnmanagedType.Struct)] ref LOGFONT lpLogfont,
             FONTENUMPROC lpEnumFontFamExProc,
             int lParam,
             int dwFlags);
@@ -254,7 +254,7 @@ namespace TextEditor
         [DllImport("user32.dll", SetLastError = true)]
         public static extern int FillRect(
             IntPtr hDC,
-            [In, MarshalAs(UnmanagedType.Struct)] Rectangle lprc,
+            [In, MarshalAs(UnmanagedType.Struct)] ref Rectangle lprc,
             IntPtr hbr); // HBRUSH
 
         [DllImport("gdi32.dll", SetLastError = true)]

@@ -323,7 +323,7 @@ namespace TextEditor
                     // national digits for Unicode U+0030 through U+0039 (European digits). For information about digit
                     // substitution, see Digit Shapes.
                     hr = ScriptApplyDigitSubstitution(
-                        null,
+                        IntPtr.Zero,
                         out o.sControl,
                         out o.sState);
                     if (hr < 0)
@@ -921,7 +921,7 @@ namespace TextEditor
 
                 using (GDIBrush backBrush = new GDIBrush(backColor))
                 {
-                    GDI.FillRect(service.hdcOffscreenStrip, bounds, backBrush);
+                    GDI.FillRect(service.hdcOffscreenStrip, ref bounds, backBrush);
                 }
 
                 ProcessText(
@@ -1745,7 +1745,7 @@ namespace TextEditor
         [DllImport("usp10.dll")]
         [return: MarshalAs(UnmanagedType.Error)]
         private static extern int ScriptApplyDigitSubstitution(
-            [In, Optional, MarshalAs(UnmanagedType.Struct)] object psds, // SCRIPT_DIGITSUBSTITUTE, null ok
+            IntPtr psds, // SCRIPT_DIGITSUBSTITUTE, null ok
             [MarshalAs(UnmanagedType.Struct)] out SCRIPT_CONTROL psc,
             [MarshalAs(UnmanagedType.Struct)] out SCRIPT_STATE pss);
 
