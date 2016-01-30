@@ -37,5 +37,11 @@ namespace TextEditor
 
             labelPrompt.Text = String.Format(labelPrompt.Text, file);
         }
+
+        protected override void WndProc(ref Message m)
+        {
+            dpiChangeHelper.WndProcDelegate(ref m);
+            base.WndProc(ref m);
+        }
     }
 }

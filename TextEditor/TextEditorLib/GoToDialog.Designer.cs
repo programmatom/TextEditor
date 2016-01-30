@@ -28,6 +28,7 @@ namespace TextEditor
         /// </summary>
         private void InitializeComponent()
         {
+            this.components = new System.ComponentModel.Container();
             this.tableLayoutPanel1 = new System.Windows.Forms.TableLayoutPanel();
             this.flowLayoutPanel1 = new System.Windows.Forms.FlowLayoutPanel();
             this.buttonCancel = new System.Windows.Forms.Button();
@@ -36,6 +37,7 @@ namespace TextEditor
             this.flowLayoutPanel2 = new System.Windows.Forms.FlowLayoutPanel();
             this.label2 = new System.Windows.Forms.Label();
             this.textBox = new System.Windows.Forms.TextBox();
+            this.dpiChangeHelper = new TextEditor.DpiChangeHelper(this.components);
             this.tableLayoutPanel1.SuspendLayout();
             this.flowLayoutPanel1.SuspendLayout();
             this.flowLayoutPanel2.SuspendLayout();
@@ -124,6 +126,10 @@ namespace TextEditor
             this.textBox.Size = new System.Drawing.Size(100, 20);
             this.textBox.TabIndex = 0;
             // 
+            // dpiChangeHelper
+            // 
+            this.dpiChangeHelper.Form = this;
+            // 
             // GoToDialog
             // 
             this.AcceptButton = this.buttonOK;
@@ -157,5 +163,6 @@ namespace TextEditor
         private System.Windows.Forms.Button buttonCancel;
         private System.Windows.Forms.Label label1;
         private System.Windows.Forms.Button buttonOK;
+        private DpiChangeHelper dpiChangeHelper;
     }
 }

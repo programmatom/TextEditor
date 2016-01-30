@@ -28,15 +28,17 @@ namespace TextEditor
         /// </summary>
         private void InitializeComponent()
         {
+            this.components = new System.ComponentModel.Container();
             this.tableLayoutPanel1 = new System.Windows.Forms.TableLayoutPanel();
-            this.labelPrompt = new System.Windows.Forms.Label();
             this.flowLayoutPanel1 = new System.Windows.Forms.FlowLayoutPanel();
             this.buttonSave = new System.Windows.Forms.Button();
             this.buttonDontSave = new System.Windows.Forms.Button();
             this.buttonCancel = new System.Windows.Forms.Button();
             this.flowLayoutPanel2 = new System.Windows.Forms.FlowLayoutPanel();
             this.label1 = new System.Windows.Forms.Label();
+            this.labelPrompt = new System.Windows.Forms.Label();
             this.label2 = new System.Windows.Forms.Label();
+            this.dpiChangeHelper = new TextEditor.DpiChangeHelper(this.components);
             this.tableLayoutPanel1.SuspendLayout();
             this.flowLayoutPanel1.SuspendLayout();
             this.flowLayoutPanel2.SuspendLayout();
@@ -57,17 +59,6 @@ namespace TextEditor
             this.tableLayoutPanel1.RowStyles.Add(new System.Windows.Forms.RowStyle());
             this.tableLayoutPanel1.Size = new System.Drawing.Size(402, 85);
             this.tableLayoutPanel1.TabIndex = 0;
-            // 
-            // labelPrompt
-            // 
-            this.labelPrompt.Anchor = System.Windows.Forms.AnchorStyles.None;
-            this.labelPrompt.AutoSize = true;
-            this.labelPrompt.Location = new System.Drawing.Point(3, 13);
-            this.labelPrompt.MaximumSize = new System.Drawing.Size(390, 200);
-            this.labelPrompt.Name = "labelPrompt";
-            this.labelPrompt.Size = new System.Drawing.Size(184, 13);
-            this.labelPrompt.TabIndex = 0;
-            this.labelPrompt.Text = "Do you want to save changes to {0}?";
             // 
             // flowLayoutPanel1
             // 
@@ -132,6 +123,17 @@ namespace TextEditor
             this.label1.Size = new System.Drawing.Size(0, 13);
             this.label1.TabIndex = 0;
             // 
+            // labelPrompt
+            // 
+            this.labelPrompt.Anchor = System.Windows.Forms.AnchorStyles.None;
+            this.labelPrompt.AutoSize = true;
+            this.labelPrompt.Location = new System.Drawing.Point(3, 13);
+            this.labelPrompt.MaximumSize = new System.Drawing.Size(390, 200);
+            this.labelPrompt.Name = "labelPrompt";
+            this.labelPrompt.Size = new System.Drawing.Size(184, 13);
+            this.labelPrompt.TabIndex = 0;
+            this.labelPrompt.Text = "Do you want to save changes to {0}?";
+            // 
             // label2
             // 
             this.label2.AutoSize = true;
@@ -139,6 +141,10 @@ namespace TextEditor
             this.label2.Name = "label2";
             this.label2.Size = new System.Drawing.Size(0, 13);
             this.label2.TabIndex = 1;
+            // 
+            // dpiChangeHelper
+            // 
+            this.dpiChangeHelper.Form = this;
             // 
             // UnsavedDialog
             // 
@@ -175,5 +181,6 @@ namespace TextEditor
         private System.Windows.Forms.FlowLayoutPanel flowLayoutPanel2;
         private System.Windows.Forms.Label label1;
         private System.Windows.Forms.Label label2;
+        private DpiChangeHelper dpiChangeHelper;
     }
 }

@@ -2724,7 +2724,7 @@ namespace TextEditor
             }
         }
 
-        [Browsable(true), Category("Appearance")]
+        [Browsable(true), Category("Appearance"), DesignerSerializationVisibility(DesignerSerializationVisibility.Hidden)]
         public override string Text
         {
             get

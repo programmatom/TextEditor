@@ -66,6 +66,12 @@
   </ItemGroup>
   <ItemGroup>
     <Compile Include="ANSIEncoding.cs" />
+    <Compile Include="DpiChangeHelper.cs">
+      <SubType>Component</SubType>
+    </Compile>
+    <Compile Include="DpiChangeHelper.designer.cs">
+      <DependentUpon>DpiChangeHelper.cs</DependentUpon>
+    </Compile>
     <Compile Include="FindDialog.cs">
       <SubType>Form</SubType>
     </Compile>

@@ -42,6 +42,12 @@ namespace TextEditor
             textBoxTabSize.Text = value.ToString();
         }
 
+        protected override void WndProc(ref Message m)
+        {
+            dpiChangeHelper.WndProcDelegate(ref m);
+            base.WndProc(ref m);
+        }
+
         public int Value
         {
             get

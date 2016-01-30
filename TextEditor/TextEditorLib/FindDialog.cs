@@ -109,6 +109,12 @@ namespace TextEditor
             return base.ProcessCmdKey(ref msg, keyData);
         }
 
+        protected override void WndProc(ref Message m)
+        {
+            dpiChangeHelper.WndProcDelegate(ref m);
+            base.WndProc(ref m);
+        }
+
         public delegate void DoMethod(SettingsInfo settings);
 
         public string FindText

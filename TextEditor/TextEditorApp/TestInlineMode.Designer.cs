@@ -49,6 +49,7 @@ namespace TextEditor
         /// </summary>
         private void InitializeComponent()
         {
+            this.components = new System.ComponentModel.Container();
             this.flowLayoutPanel1 = new System.Windows.Forms.FlowLayoutPanel();
             this.label1 = new System.Windows.Forms.Label();
             this.label2 = new System.Windows.Forms.Label();
@@ -60,6 +61,7 @@ namespace TextEditor
             this.label5 = new System.Windows.Forms.Label();
             this.label6 = new System.Windows.Forms.Label();
             this.button1 = new System.Windows.Forms.Button();
+            this.dpiChangeHelper = new TextEditor.DpiChangeHelper(this.components);
             this.flowLayoutPanel1.SuspendLayout();
             this.SuspendLayout();
             // 
@@ -177,6 +179,10 @@ namespace TextEditor
             this.button1.Text = "button1";
             this.button1.UseVisualStyleBackColor = true;
             // 
+            // dpiChangeHelper
+            // 
+            this.dpiChangeHelper.Form = this;
+            // 
             // TestInlineMode
             // 
             this.AutoScaleDimensions = new System.Drawing.SizeF(6F, 13F);
@@ -204,5 +210,6 @@ namespace TextEditor
         private System.Windows.Forms.Label label6;
         private StringStorageFactory stringStorageFactory;
         private System.Windows.Forms.Button button1;
+        private DpiChangeHelper dpiChangeHelper;
     }
 }

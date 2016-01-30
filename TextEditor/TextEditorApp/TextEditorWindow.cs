@@ -25,6 +25,7 @@ using System.ComponentModel;
 using System.Diagnostics;
 using System.Drawing;
 using System.IO;
+using System.Reflection;
 using System.Runtime.InteropServices;
 using System.Text;
 using System.Windows.Forms;
@@ -71,7 +72,19 @@ namespace TextEditor
             }
             catch (FileNotFoundException exception)
             {
-                MessageBox.Show(String.Format("Unable to load program component. To solve this problem, make sure the Visual Studio 2015 Redistributable is installed on the computer. (Internal exception: {0})", exception.Message));
+                string platform = String.Empty;
+                switch (Assembly.GetExecutingAssembly().GetName().ProcessorArchitecture)
+                {
+                    default:
+                        break;
+                    case ProcessorArchitecture.X86:
+                        platform = " (x86)";
+                        break;
+                    case ProcessorArchitecture.Amd64:
+                        platform = " (x64)";
+                        break;
+                }
+                MessageBox.Show(String.Format("Unable to load program component. To solve this problem, make sure the Visual Studio 2015 Redistributable{1} is installed on the computer. (Internal exception: {0})", exception.Message, platform));
                 throw;
             }
             textEditControl.Font = config.Font;
@@ -399,6 +412,12 @@ namespace TextEditor
 
                 return new EncodingInfo(encoding, bomLength);
             }
+        }
+
+        protected override void WndProc(ref Message m)
+        {
+            dpiChangeHelper.WndProcDelegate(ref m, delegate (float scale) { DpiChangeHelper.ScaleFont(textEditControl, scale); });
+            base.WndProc(ref m);
         }
 
         protected override void OnShown(EventArgs e)

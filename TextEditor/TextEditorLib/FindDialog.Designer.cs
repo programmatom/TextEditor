@@ -47,6 +47,7 @@ namespace TextEditor
             this.checkBoxMatchWholeWord = new System.Windows.Forms.CheckBox();
             this.checkBoxUp = new System.Windows.Forms.CheckBox();
             this.timerReleaseControl = new System.Windows.Forms.Timer(this.components);
+            this.dpiChangeHelper = new TextEditor.DpiChangeHelper(this.components);
             this.tableLayoutPanel1.SuspendLayout();
             this.groupBox2.SuspendLayout();
             this.flowLayoutPanel2.SuspendLayout();
@@ -234,6 +235,10 @@ namespace TextEditor
             this.checkBoxUp.Text = "Up";
             this.checkBoxUp.UseVisualStyleBackColor = true;
             // 
+            // dpiChangeHelper
+            // 
+            this.dpiChangeHelper.Form = this;
+            // 
             // FindDialog
             // 
             this.AcceptButton = this.buttonFindNext;
@@ -280,5 +285,6 @@ namespace TextEditor
         private System.Windows.Forms.CheckBox checkBoxMatchWholeWord;
         private System.Windows.Forms.Timer timerReleaseControl;
         private System.Windows.Forms.CheckBox checkBoxUp;
+        private DpiChangeHelper dpiChangeHelper;
     }
 }

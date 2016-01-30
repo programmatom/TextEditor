@@ -49,6 +49,7 @@ namespace TextEditor
             this.checkBoxCaseSensitive = new System.Windows.Forms.CheckBox();
             this.checkBoxMatchWholeWord = new System.Windows.Forms.CheckBox();
             this.timerStatusUpdate = new System.Windows.Forms.Timer(this.components);
+            this.dpiChangeHelper = new TextEditor.DpiChangeHelper(this.components);
             this.tableLayoutPanel2.SuspendLayout();
             ((System.ComponentModel.ISupportInitialize)(this.dataGridViewFindResults)).BeginInit();
             ((System.ComponentModel.ISupportInitialize)(this.findInFilesEntryBindingSource)).BeginInit();
@@ -282,6 +283,10 @@ namespace TextEditor
             this.timerStatusUpdate.Interval = 250;
             this.timerStatusUpdate.Tick += new System.EventHandler(this.timerStatusUpdate_Tick);
             // 
+            // dpiChangeHelper
+            // 
+            this.dpiChangeHelper.Form = this;
+            // 
             // FindInFiles
             // 
             this.AcceptButton = this.buttonFind;
@@ -324,5 +329,6 @@ namespace TextEditor
         private System.Windows.Forms.Button buttonFileDialog;
         private MyLabel labelStatus;
         private System.Windows.Forms.FlowLayoutPanel flowLayoutPanel1;
+        private DpiChangeHelper dpiChangeHelper;
     }
 }

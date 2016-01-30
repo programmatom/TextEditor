@@ -89,6 +89,8 @@ namespace TextEditor
             this.toolStripMenuItem6 = new System.Windows.Forms.ToolStripSeparator();
             this.defaultSettingsToolStripMenuItem = new System.Windows.Forms.ToolStripMenuItem();
             this.toolsToolStripMenuItem = new System.Windows.Forms.ToolStripMenuItem();
+            this.testInlineModeToolStripMenuItem = new System.Windows.Forms.ToolStripMenuItem();
+            this.toolStripMenuItem15 = new System.Windows.Forms.ToolStripSeparator();
             this.previousUTF16SurrogatePairToolStripMenuItem = new System.Windows.Forms.ToolStripMenuItem();
             this.nextUTF16SurrogatePairToolStripMenuItem = new System.Windows.Forms.ToolStripMenuItem();
             this.toolStripMenuItem12 = new System.Windows.Forms.ToolStripSeparator();
@@ -109,8 +111,7 @@ namespace TextEditor
             this.helper = new TextEditor.TextEditorWindowHelper(this.components);
             this.protectedStorageFactory = new TextEditor.ProtectedStorageFactory();
             this.utf8SplayGapBufferFactory = new TextEditor.Utf8SplayGapStorageFactory();
-            this.testInlineModeToolStripMenuItem = new System.Windows.Forms.ToolStripMenuItem();
-            this.toolStripMenuItem15 = new System.Windows.Forms.ToolStripSeparator();
+            this.dpiChangeHelper = new TextEditor.DpiChangeHelper(this.components);
             this.menuStrip.SuspendLayout();
             this.tableLayoutPanel1.SuspendLayout();
             this.toolStrip.SuspendLayout();
@@ -585,6 +586,18 @@ namespace TextEditor
             this.toolsToolStripMenuItem.Size = new System.Drawing.Size(47, 24);
             this.toolsToolStripMenuItem.Text = "&Tools";
             // 
+            // testInlineModeToolStripMenuItem
+            // 
+            this.testInlineModeToolStripMenuItem.Name = "testInlineModeToolStripMenuItem";
+            this.testInlineModeToolStripMenuItem.Size = new System.Drawing.Size(256, 22);
+            this.testInlineModeToolStripMenuItem.Text = "Test Inline Mode...";
+            this.testInlineModeToolStripMenuItem.Click += new System.EventHandler(this.testInlineModeToolStripMenuItem_Click);
+            // 
+            // toolStripMenuItem15
+            // 
+            this.toolStripMenuItem15.Name = "toolStripMenuItem15";
+            this.toolStripMenuItem15.Size = new System.Drawing.Size(253, 6);
+            // 
             // previousUTF16SurrogatePairToolStripMenuItem
             // 
             this.previousUTF16SurrogatePairToolStripMenuItem.Name = "previousUTF16SurrogatePairToolStripMenuItem";
@@ -739,17 +752,9 @@ namespace TextEditor
             this.helper.TrimTrailingSpacesToolStripMenuItem = this.trimTrailingSpacesToolStripMenuItem;
             this.helper.UndoToolStripMenuItem = this.undoToolStripMenuItem;
             // 
-            // testInlineModeToolStripMenuItem
+            // dpiChangeHelper
             // 
-            this.testInlineModeToolStripMenuItem.Name = "testInlineModeToolStripMenuItem";
-            this.testInlineModeToolStripMenuItem.Size = new System.Drawing.Size(256, 22);
-            this.testInlineModeToolStripMenuItem.Text = "Test Inline Mode...";
-            this.testInlineModeToolStripMenuItem.Click += new System.EventHandler(this.testInlineModeToolStripMenuItem_Click);
-            // 
-            // toolStripMenuItem15
-            // 
-            this.toolStripMenuItem15.Name = "toolStripMenuItem15";
-            this.toolStripMenuItem15.Size = new System.Drawing.Size(253, 6);
+            this.dpiChangeHelper.Form = this;
             // 
             // TextEditorWindow
             // 
@@ -853,5 +858,6 @@ namespace TextEditor
         private System.Windows.Forms.ToolStripMenuItem simpleNavigationToolStripMenuItem;
         private System.Windows.Forms.ToolStripMenuItem testInlineModeToolStripMenuItem;
         private System.Windows.Forms.ToolStripSeparator toolStripMenuItem15;
+        private DpiChangeHelper dpiChangeHelper;
     }
 }

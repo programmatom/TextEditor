@@ -126,6 +126,12 @@ namespace TextEditor
             }
         }
 
+        protected override void WndProc(ref Message m)
+        {
+            dpiChangeHelper.WndProcDelegate(ref m);
+            base.WndProc(ref m);
+        }
+
         protected override void OnFormClosing(FormClosingEventArgs e)
         {
             if (task != null)

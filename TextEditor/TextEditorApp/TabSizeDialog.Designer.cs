@@ -28,15 +28,17 @@ namespace TextEditor
         /// </summary>
         private void InitializeComponent()
         {
+            this.components = new System.ComponentModel.Container();
             this.tableLayoutPanel1 = new System.Windows.Forms.TableLayoutPanel();
             this.groupBox1 = new System.Windows.Forms.GroupBox();
             this.flowLayoutPanel1 = new System.Windows.Forms.FlowLayoutPanel();
-            this.textBoxTabSize = new System.Windows.Forms.TextBox();
             this.label1 = new System.Windows.Forms.Label();
+            this.textBoxTabSize = new System.Windows.Forms.TextBox();
             this.flowLayoutPanel2 = new System.Windows.Forms.FlowLayoutPanel();
             this.buttonCancel = new System.Windows.Forms.Button();
             this.label2 = new System.Windows.Forms.Label();
             this.buttonOK = new System.Windows.Forms.Button();
+            this.dpiChangeHelper = new TextEditor.DpiChangeHelper(this.components);
             this.tableLayoutPanel1.SuspendLayout();
             this.groupBox1.SuspendLayout();
             this.flowLayoutPanel1.SuspendLayout();
@@ -60,8 +62,8 @@ namespace TextEditor
             // 
             // groupBox1
             // 
-            this.groupBox1.Anchor = ((System.Windows.Forms.AnchorStyles)(((System.Windows.Forms.AnchorStyles.Top | System.Windows.Forms.AnchorStyles.Left)
-                        | System.Windows.Forms.AnchorStyles.Right)));
+            this.groupBox1.Anchor = ((System.Windows.Forms.AnchorStyles)(((System.Windows.Forms.AnchorStyles.Top | System.Windows.Forms.AnchorStyles.Left) 
+            | System.Windows.Forms.AnchorStyles.Right)));
             this.groupBox1.AutoSizeMode = System.Windows.Forms.AutoSizeMode.GrowAndShrink;
             this.groupBox1.Controls.Add(this.flowLayoutPanel1);
             this.groupBox1.Location = new System.Drawing.Point(3, 3);
@@ -81,14 +83,6 @@ namespace TextEditor
             this.flowLayoutPanel1.Size = new System.Drawing.Size(280, 40);
             this.flowLayoutPanel1.TabIndex = 0;
             // 
-            // textBoxTabSize
-            // 
-            this.textBoxTabSize.Anchor = System.Windows.Forms.AnchorStyles.Left;
-            this.textBoxTabSize.Location = new System.Drawing.Point(61, 3);
-            this.textBoxTabSize.Name = "textBoxTabSize";
-            this.textBoxTabSize.Size = new System.Drawing.Size(100, 20);
-            this.textBoxTabSize.TabIndex = 0;
-            // 
             // label1
             // 
             this.label1.Anchor = System.Windows.Forms.AnchorStyles.Left;
@@ -98,6 +92,14 @@ namespace TextEditor
             this.label1.Size = new System.Drawing.Size(52, 13);
             this.label1.TabIndex = 1;
             this.label1.Text = "Tab Size:";
+            // 
+            // textBoxTabSize
+            // 
+            this.textBoxTabSize.Anchor = System.Windows.Forms.AnchorStyles.Left;
+            this.textBoxTabSize.Location = new System.Drawing.Point(61, 3);
+            this.textBoxTabSize.Name = "textBoxTabSize";
+            this.textBoxTabSize.Size = new System.Drawing.Size(100, 20);
+            this.textBoxTabSize.TabIndex = 0;
             // 
             // flowLayoutPanel2
             // 
@@ -138,6 +140,10 @@ namespace TextEditor
             this.buttonOK.Text = "OK";
             this.buttonOK.UseVisualStyleBackColor = true;
             // 
+            // dpiChangeHelper
+            // 
+            this.dpiChangeHelper.Form = this;
+            // 
             // TabSizeDialog
             // 
             this.AcceptButton = this.buttonOK;
@@ -171,5 +177,6 @@ namespace TextEditor
         private System.Windows.Forms.Button buttonCancel;
         private System.Windows.Forms.Label label2;
         private System.Windows.Forms.Button buttonOK;
+        private DpiChangeHelper dpiChangeHelper;
     }
 }
