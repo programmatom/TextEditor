@@ -438,17 +438,18 @@ namespace TextEditor
 
         private static IntPtr CreateBitmapInternal(int width, int height, PixelFormat format)
         {
-            uint cPlains, cBitsPerPixel;
+            uint cPlanes, cBitsPerPixel;
             switch (format)
             {
                 default:
                     throw new ArgumentException();
                 case PixelFormat.Format32bppRgb:
-                    cPlains = 1 << 24;
-                    cBitsPerPixel = 1 << 32;
+                case PixelFormat.Format32bppArgb:
+                    cPlanes = 1;
+                    cBitsPerPixel = 32;
                     break;
             }
-            IntPtr h = GDI.CreateBitmap(width, height, cPlains, cBitsPerPixel, IntPtr.Zero);
+            IntPtr h = GDI.CreateBitmap(width, height, cPlanes, cBitsPerPixel, IntPtr.Zero);
             if (h == IntPtr.Zero)
             {
                 Marshal.ThrowExceptionForHR(Marshal.GetHRForLastWin32Error());

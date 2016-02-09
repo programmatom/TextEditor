@@ -185,6 +185,8 @@ namespace TextEditor
             DisposeGraphicsObjects(); // force recreate offscreen strip
             textService.Reset(Font, ClientWidth);
 
+            RecomputeCanvasSize();
+
             //Invalidate();
         }
 
@@ -693,7 +695,7 @@ namespace TextEditor
                                                 : anchor.X,
                                             0,
                                             RightToLeft != RightToLeft.Yes
-                                                ? currentWidth
+                                                ? Math.Max(AutoScrollMinSize.Width, ClientWidth)
                                                 : rtlXAdjust,
                                             fontHeight);
                                         highlight.Union(rect3);
@@ -746,7 +748,7 @@ namespace TextEditor
             }
 
         PutOnscreen:
-            graphics.DrawImageUnscaled(offscreenStrip, new Rectangle(0, rect.Y, ClientWidth, fontHeight));
+            graphics.DrawImage(offscreenStrip, new Rectangle(0, rect.Y, ClientWidth, fontHeight));
         }
 
         public static void GetSpaceFromTabLineLength(string line, int spacesPerTab, out int length, out bool tabsFound)

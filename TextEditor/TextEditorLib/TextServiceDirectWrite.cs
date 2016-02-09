@@ -346,12 +346,17 @@ namespace TextEditor
     // A rather incomplete wrapper around DirectWrite that provides functions matching what TextRenderer provides.
     public static class DirectWriteTextRenderer
     {
+        private static List<KeyValuePair<Font, TextServiceDirectWriteInterop>> interops;
+#if false
         private static TextServiceDirectWriteInterop interop;
         private static Font lastFont;
+#endif
         private static int lastWidth;
+        private const int MaxCachedInterops = 3;
 
-        private static void EnsureInterop(Font font)
+        private static TextServiceDirectWriteInterop EnsureInterop(Font font)
         {
+#if false
             if (interop == null)
             {
                 interop = new TextServiceDirectWriteInterop();
@@ -362,6 +367,47 @@ namespace TextEditor
                 lastWidth = Screen.PrimaryScreen.Bounds.Width;
                 interop.Reset(lastFont, lastWidth);
             }
+#endif
+            if (interops == null)
+            {
+                interops = new List<KeyValuePair<Font, TextServiceDirectWriteInterop>>();
+            }
+
+            if (lastWidth != Screen.PrimaryScreen.Bounds.Width)
+            {
+                ClearCache();
+            }
+            lastWidth = Screen.PrimaryScreen.Bounds.Width;
+
+            int index = -1;
+            for (int i = 0; i < interops.Count; i++)
+            {
+                if (font == interops[i].Key)
+                {
+                    index = i;
+                }
+            }
+            if (index < 0)
+            {
+                if (interops.Count >= MaxCachedInterops)
+                {
+                    ClearCache();
+                }
+                index = 0;
+                TextServiceDirectWriteInterop interop = new TextServiceDirectWriteInterop();
+                interop.Reset(font, lastWidth);
+                interops.Add(new KeyValuePair<Font, TextServiceDirectWriteInterop>(font, interop));
+            }
+            return interops[index].Value;
+        }
+
+        private static void ClearCache()
+        {
+            for (int i = 0; i < interops.Count; i++)
+            {
+                interops[i].Value._Dispose();
+            }
+            interops.Clear();
         }
 
         public static void DrawText(Graphics graphics, string text, Font font, Point pt, Color foreColor)
@@ -401,7 +447,7 @@ namespace TextEditor
 
         public static void DrawText(Graphics graphics, string text, Font font, Rectangle bounds, Color foreColor, Color backColor, TextFormatFlags flags)
         {
-            EnsureInterop(font);
+            TextServiceDirectWriteInterop interop = EnsureInterop(font);
 
             using (TextServiceLineDirectWriteInterop lineInterop = new TextServiceLineDirectWriteInterop())
             {
@@ -429,7 +475,7 @@ namespace TextEditor
 
         public static Size MeasureText(Graphics graphics, string text, Font font)
         {
-            EnsureInterop(font);
+            TextServiceDirectWriteInterop interop = EnsureInterop(font);
 
             using (TextServiceLineDirectWriteInterop lineInterop = new TextServiceLineDirectWriteInterop())
             {

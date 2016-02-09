@@ -43,7 +43,7 @@ namespace TextEditor
     public class Utf8SplayGapBuffer : Utf8GapBuffer
     {
 #if DEBUG
-        public const bool EnableValidate = true;
+        public static readonly bool EnableValidate = true;
 #else
         public const bool EnableValidate = false;
 #endif
