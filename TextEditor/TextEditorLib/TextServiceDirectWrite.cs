@@ -35,8 +35,8 @@ namespace TextEditor
 {
     public class TextServiceDirectWrite : ITextService, IDisposable
     {
-        private TextServiceDirectWriteInterop interop;
-        private ITextService uniscribeService;
+        private readonly TextServiceDirectWriteInterop interop;
+        private readonly ITextService uniscribeService;
 
         public TextServiceDirectWrite()
         {
@@ -87,7 +87,11 @@ namespace TextEditor
             Font font,
             int visibleWidth)
         {
-            interop.Reset(font, visibleWidth);
+            int hr = interop.Reset(font, visibleWidth);
+            if (hr < 0)
+            {
+                Marshal.ThrowExceptionForHR(hr);
+            }
 #if true
             uniscribeService.Reset(font, visibleWidth);
 #else // TODO: support Windows.Data.Text for universal script segmentation support
@@ -115,9 +119,9 @@ namespace TextEditor
         [ClassInterface(ClassInterfaceType.None)]
         private class TextLayout : ITextInfo, IDisposable
         {
-            private TextServiceLineDirectWriteInterop lineInterop;
-            private ITextInfo uniscribeLine;
-            private string text;
+            private readonly TextServiceLineDirectWriteInterop lineInterop;
+            private readonly ITextInfo uniscribeLine;
+            private readonly string text;
 
             public TextLayout(
                 TextServiceDirectWrite service,
@@ -125,21 +129,29 @@ namespace TextEditor
                 Graphics graphics_,
                 Font font_)
             {
-                int hr;
-
-                text = line;
-
-                lineInterop = new TextServiceLineDirectWriteInterop();
-                hr = lineInterop.Init(service.interop, line);
-                if (hr < 0)
+                try
                 {
-                    Marshal.ThrowExceptionForHR(hr);
-                }
+                    int hr;
+
+                    text = line;
+
+                    lineInterop = new TextServiceLineDirectWriteInterop();
+                    hr = lineInterop.Init(service.interop, line);
+                    if (hr < 0)
+                    {
+                        Marshal.ThrowExceptionForHR(hr);
+                    }
 
 #if true
-                uniscribeLine = service.uniscribeService.AnalyzeText(graphics_, font_, line);
+                    uniscribeLine = service.uniscribeService.AnalyzeText(graphics_, font_, line);
 #else // TODO: support Windows.Data.Text for universal script segmentation support
 #endif
+                }
+                catch (Exception)
+                {
+                    Dispose();
+                    throw;
+                }
             }
 
             ~TextLayout()
@@ -370,7 +382,7 @@ namespace TextEditor
 #endif
             if (interops == null)
             {
-                interops = new List<KeyValuePair<Font, TextServiceDirectWriteInterop>>();
+                interops = new List<KeyValuePair<Font, TextServiceDirectWriteInterop>>(MaxCachedInterops);
             }
 
             if (lastWidth != Screen.PrimaryScreen.Bounds.Width)
@@ -382,7 +394,7 @@ namespace TextEditor
             int index = -1;
             for (int i = 0; i < interops.Count; i++)
             {
-                if (font == interops[i].Key)
+                if (font.Equals(interops[i].Key))
                 {
                     index = i;
                 }
@@ -393,10 +405,22 @@ namespace TextEditor
                 {
                     ClearCache();
                 }
-                index = 0;
+                index = interops.Count;
                 TextServiceDirectWriteInterop interop = new TextServiceDirectWriteInterop();
                 interop.Reset(font, lastWidth);
                 interops.Add(new KeyValuePair<Font, TextServiceDirectWriteInterop>(font, interop));
+#if DEBUG
+                Debugger.Log(
+                    1,
+                    "TextServiceDirectWrite",
+                    String.Concat(
+                        DateTime.Now.ToString(),
+                        ": Added DirectWrite interop for ",
+                        font.ToString(),
+                        " ",
+                        font.Style.ToString(),
+                        Environment.NewLine));
+#endif
             }
             return interops[index].Value;
         }
@@ -408,6 +432,15 @@ namespace TextEditor
                 interops[i].Value._Dispose();
             }
             interops.Clear();
+#if DEBUG
+            Debugger.Log(
+                1,
+                "TextServiceDirectWrite",
+                String.Concat(
+                    DateTime.Now.ToString(),
+                    ": Flushed DirectWrite interop list",
+                    Environment.NewLine));
+#endif
         }
 
         public static void DrawText(Graphics graphics, string text, Font font, Point pt, Color foreColor)
@@ -506,6 +539,20 @@ namespace TextEditor
         public static Size MeasureText(Graphics graphics, string text, Font font, Size proposedSize, TextFormatFlags flags)
         {
             return MeasureText(graphics, text, font);
+        }
+
+
+        public static void RegisterPrivateMemoryFont(byte[] data)
+        {
+            GCHandle hData = GCHandle.Alloc(data, GCHandleType.Pinned);
+            try
+            {
+                TextServiceFontEnumeratorHelper.AddFont(hData.AddrOfPinnedObject().ToInt64(), data.Length);
+            }
+            finally
+            {
+                hData.Free();
+            }
         }
     }
 }

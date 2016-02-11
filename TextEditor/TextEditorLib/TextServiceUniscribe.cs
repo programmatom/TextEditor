@@ -122,7 +122,7 @@ namespace TextEditor
 
         private int FontCacheIndex(Font font)
         {
-            int index = Array.FindIndex(caches, delegate(FontCacheEntry candidate) { return candidate.font == font; });
+            int index = Array.FindIndex(caches, delegate (FontCacheEntry candidate) { return candidate.font == font; });
             if (index < 0)
             {
                 index = caches.Length;
@@ -788,7 +788,7 @@ namespace TextEditor
                                 bool r = GDI.EnumEnhMetaFile(
                                     IntPtr.Zero, // hdc
                                     hMF,
-                                    delegate(
+                                    delegate (
                                         IntPtr hdc_,
                                         IntPtr[] lpht,// capacity is nHandles
                                         IntPtr lpmr, // ENHMETARECORD
@@ -916,8 +916,8 @@ namespace TextEditor
                 Rectangle bounds = new Rectangle(0, 0, width, height);
                 Rectangle margin = new Rectangle(-height, 0, width + 2 * height, height);
                 Debug.Assert(service.offscreenStrip != null);
-                Debug.Assert(service.offscreenStrip.width == width);
-                Debug.Assert(service.offscreenStrip.height == height);
+                Debug.Assert(service.offscreenStrip.Width == width);
+                Debug.Assert(service.offscreenStrip.Height == height);
 
                 using (GDIBrush backBrush = new GDIBrush(backColor))
                 {
@@ -926,7 +926,7 @@ namespace TextEditor
 
                 ProcessText(
                     position,
-                    delegate(
+                    delegate (
                         int iItem,
                         Point where,
                         int endX,
@@ -999,7 +999,7 @@ namespace TextEditor
 
                 ProcessText(
                     position,
-                    delegate(
+                    delegate (
                         int iItem,
                         Point where,
                         int endX,
@@ -1084,7 +1084,7 @@ namespace TextEditor
 
                 ProcessText(
                     new Point(),
-                    delegate(
+                    delegate (
                         int iItem,
                         Point where,
                         int endX,
@@ -1109,7 +1109,7 @@ namespace TextEditor
 
                 ProcessText(
                     new Point(),
-                    delegate(
+                    delegate (
                         int iItem,
                         Point where,
                         int endX,
@@ -1156,7 +1156,7 @@ namespace TextEditor
 
                 ProcessText(
                     new Point(),
-                    delegate(
+                    delegate (
                         int iItem,
                         Point where,
                         int endX,

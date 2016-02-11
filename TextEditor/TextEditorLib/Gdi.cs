@@ -138,6 +138,51 @@ namespace TextEditor
         public const byte FF_MODERN = (3 << 4); // Constant stroke width, serifed or sans-serifed. Pica, Elite, Courier, etc.
         public const byte FF_SCRIPT = (4 << 4); // Cursive, etc.
         public const byte FF_DECORATIVE = (5 << 4); // Old English, etc.
+        /* Font Weights */
+        public const int FW_DONTCARE = 0;
+        public const int FW_THIN = 100;
+        public const int FW_EXTRALIGHT = 200;
+        public const int FW_LIGHT = 300;
+        public const int FW_NORMAL = 400;
+        public const int FW_MEDIUM = 500;
+        public const int FW_SEMIBOLD = 600;
+        public const int FW_BOLD = 700;
+        public const int FW_EXTRABOLD = 800;
+        public const int FW_HEAVY = 900;
+        public const int FW_ULTRALIGHT = FW_EXTRALIGHT;
+        public const int FW_REGULAR = FW_NORMAL;
+        public const int FW_DEMIBOLD = FW_SEMIBOLD;
+        public const int FW_ULTRABOLD = FW_EXTRABOLD;
+        public const int FW_BLACK = FW_HEAVY;
+        // Out precision
+        public const int OUT_DEFAULT_PRECIS = 0;
+        public const int OUT_STRING_PRECIS = 1;
+        public const int OUT_CHARACTER_PRECIS = 2;
+        public const int OUT_STROKE_PRECIS = 3;
+        public const int OUT_TT_PRECIS = 4;
+        public const int OUT_DEVICE_PRECIS = 5;
+        public const int OUT_RASTER_PRECIS = 6;
+        public const int OUT_TT_ONLY_PRECIS = 7;
+        public const int OUT_OUTLINE_PRECIS = 8;
+        public const int OUT_SCREEN_OUTLINE_PRECIS = 9;
+        public const int OUT_PS_ONLY_PRECIS = 10;
+        // Clip precision
+        public const int CLIP_DEFAULT_PRECIS = 0;
+        public const int CLIP_CHARACTER_PRECIS = 1;
+        public const int CLIP_STROKE_PRECIS = 2;
+        public const int CLIP_MASK = 0xf;
+        public const int CLIP_LH_ANGLES = (1 << 4);
+        public const int CLIP_TT_ALWAYS = (2 << 4);
+        public const int CLIP_DFA_DISABLE = (4 << 4);
+        public const int CLIP_EMBEDDED = (8 << 4);
+        // Quality
+        public const int DEFAULT_QUALITY = 0;
+        public const int DRAFT_QUALITY = 1;
+        public const int PROOF_QUALITY = 2;
+        public const int NONANTIALIASED_QUALITY = 3;
+        public const int ANTIALIASED_QUALITY = 4;
+        public const int CLEARTYPE_QUALITY = 5;
+        public const int CLEARTYPE_NATURAL_QUALITY = 6;
 
         public static void GetLogFont(Font font, Graphics graphics, out LOGFONT logfont)
         {
@@ -152,6 +197,13 @@ namespace TextEditor
             }
             logfont = (LOGFONT)o;
         }
+
+        [DllImport("gdi32.dll", SetLastError = true)]
+        public static extern IntPtr/*HANDLE*/ AddFontMemResourceEx(
+            [In] byte[] pbFont,
+            [In] int cbFont,
+            [In] IntPtr pdv,
+            [Out] out int pcFonts);
 
         // https://msdn.microsoft.com/en-us/library/windows/desktop/dd162627%28v=vs.85%29.aspx
         [StructLayout(LayoutKind.Sequential, CharSet = CharSet.Unicode, Size = 348)]
@@ -357,7 +409,20 @@ namespace TextEditor
         public void Dispose()
         {
             graphics.ReleaseHdc();
+
+            GC.SuppressFinalize(this);
         }
+
+        ~GraphicsHDC()
+        {
+#if DEBUG
+            Debug.Assert(false, this.GetType().Name + " finalizer invoked - have you forgotten to .Dispose()? " + allocatedFrom.ToString());
+#endif
+            Dispose();
+        }
+#if DEBUG
+        private readonly StackTrace allocatedFrom = new StackTrace(true);
+#endif
 
         public static implicit operator IntPtr(GraphicsHDC o)
         {
@@ -383,7 +448,20 @@ namespace TextEditor
             {
                 GDI.DeleteObject(h);
             }
+
+            GC.SuppressFinalize(this);
         }
+
+        ~GDIObject()
+        {
+#if DEBUG
+            Debug.Assert(false, this.GetType().Name + " finalizer invoked - have you forgotten to .Dispose()? " + allocatedFrom.ToString());
+#endif
+            Dispose();
+        }
+#if DEBUG
+        private readonly StackTrace allocatedFrom = new StackTrace(true);
+#endif
 
         public static implicit operator IntPtr(GDIObject o)
         {
@@ -409,8 +487,8 @@ namespace TextEditor
 
     public class GDIBitmap : GDIObject
     {
-        public readonly int width;
-        public readonly int height;
+        private readonly int width;
+        private readonly int height;
 
         public GDIBitmap(int width, int height, IntPtr hdc) // CreateCompatibleBitmap wrapper
             : base(CreateBitmapInternal(width, height, hdc))
@@ -425,6 +503,9 @@ namespace TextEditor
             this.width = width;
             this.height = height;
         }
+
+        public int Width { get { return width; } }
+        public int Height { get { return height; } }
 
         private static IntPtr CreateBitmapInternal(int width, int height, IntPtr hdc)
         {
@@ -514,7 +595,20 @@ namespace TextEditor
             {
                 GDI.DeleteDC(h);
             }
+
+            GC.SuppressFinalize(this);
         }
+
+        ~GDIDeviceContext()
+        {
+#if DEBUG
+            Debug.Assert(false, this.GetType().Name + " finalizer invoked - have you forgotten to .Dispose()? " + allocatedFrom.ToString());
+#endif
+            Dispose();
+        }
+#if DEBUG
+        private readonly StackTrace allocatedFrom = new StackTrace(true);
+#endif
 
         public static implicit operator IntPtr(GDIDeviceContext o)
         {
@@ -550,5 +644,73 @@ namespace TextEditor
             : base(hdc)
         {
         }
+    }
+
+    // package for GDI offscreen bitmap that plays nice with ExtTextOut, Uniscribe, and DirectWrite
+    public class GDIOffscreenBitmap : IDisposable
+    {
+        private readonly GDIBitmap hBitmap;
+        private readonly GDIDC hDC;
+        private readonly Graphics graphics;
+
+        public GDIOffscreenBitmap(Graphics graphicsCompatibleWith, int width, int height)
+        {
+            if ((width <= 0) || (height <= 0))
+            {
+                Debug.Assert(false);
+                throw new ArgumentException();
+            }
+
+            // Create GDI objects for offscreen. Must be created through GDI because Uniscribe/DirectWrite do not
+            // like objects created by GDI+ and will draw with very poor quality on them.
+            using (GraphicsHDC hDC = new GraphicsHDC(graphicsCompatibleWith))
+            {
+                this.hDC = GDIDC.CreateCompatibleDC(hDC);
+                hBitmap = new GDIBitmap(width, height, PixelFormat.Format32bppArgb);
+                GDI.SelectObject(this.hDC, hBitmap);
+            }
+            graphics = Graphics.FromHdc(hDC);
+        }
+
+        public void Dispose()
+        {
+            if (graphics != null)
+            {
+                graphics.Dispose();
+            }
+            if (hDC != null)
+            {
+                hDC.Dispose();
+            }
+            if (hBitmap != null)
+            {
+                hBitmap.Dispose();
+            }
+
+            GC.SuppressFinalize(this);
+        }
+
+        ~GDIOffscreenBitmap()
+        {
+#if DEBUG
+            Debug.Assert(false, this.GetType().Name + " finalizer invoked - have you forgotten to .Dispose()? " + allocatedFrom.ToString());
+#endif
+            Dispose();
+        }
+#if DEBUG
+        private readonly StackTrace allocatedFrom = new StackTrace(true);
+#endif
+
+        // gets the GDI+ wrapper
+        public Graphics Graphics { get { return graphics; } }
+
+        // gets the device context handle for use with BitBlt()
+        public IntPtr HDC { get { return hDC; } }
+
+        // gets the bitmap handle for use with Bitmap.FromHBitmap()
+        public IntPtr HBitmap { get { return hBitmap; } }
+
+        public int Width { get { return hBitmap.Width; } }
+        public int Height { get { return hBitmap.Height; } }
     }
 }

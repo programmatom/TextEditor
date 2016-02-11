@@ -47,6 +47,11 @@ namespace TextEditor
 		IDWriteBitmapRenderTarget* renderTarget; // contains offscreen strip
 		float rdpiX, rdpiY;
 
+		static IDWriteFontCollectionLoader* customFontCollectionLoader;
+
+	public:
+		static IDWriteFontFileLoader* customFontFileLoader;
+
 	public:
 
 		TextServiceDirectWriteInterop();
@@ -202,5 +207,135 @@ namespace TextEditor
 			BOOL isSideways,
 			BOOL isRightToLeft,
 			__maybenull IUnknown* clientDrawingEffect);
+	};
+
+
+	public class TextServiceFontCollectionLoader : public IDWriteFontCollectionLoader
+	{
+	private:
+		long refCount;
+
+	public:
+
+		TextServiceFontCollectionLoader();
+
+		unsigned long STDMETHODCALLTYPE AddRef();
+
+		unsigned long STDMETHODCALLTYPE Release();
+
+		STDMETHOD(QueryInterface)(
+			IID const& riid,
+			void** ppvObject);
+
+
+		STDMETHOD(CreateEnumeratorFromKey)(
+			IDWriteFactory* factory,
+			const void* collectionKey,
+			UINT32 collectionKeySize,
+			IDWriteFontFileEnumerator** fontFileEnumerator);
+	};
+
+	public ref class TextServiceFontEnumeratorHelper
+	{
+	public:
+		static void AddFont(INT64 data, int length);
+	};
+
+	public class TextServiceFontEnumerator : public IDWriteFontFileEnumerator
+	{
+	private:
+		long refCount;
+		long index;
+		IDWriteFactory* factory;
+
+	public:
+		static CSimpleArray<BYTE*> fonts;
+		static CSimpleArray<long> lengths;
+
+		static void AddFont(BYTE* data, int length);
+
+	public:
+
+		TextServiceFontEnumerator(
+			IDWriteFactory* factory);
+
+		~TextServiceFontEnumerator();
+
+		unsigned long STDMETHODCALLTYPE AddRef();
+
+		unsigned long STDMETHODCALLTYPE Release();
+
+		STDMETHOD(QueryInterface)(
+			IID const& riid,
+			void** ppvObject);
+
+
+		STDMETHOD(GetCurrentFontFile)(
+			IDWriteFontFile** fontFile);
+
+		STDMETHOD(MoveNext)(
+			BOOL* hasCurrentFile);
+	};
+
+	public class TextServiceFontLoader : public IDWriteFontFileLoader
+	{
+	private:
+		long refCount;
+
+	public:
+
+		TextServiceFontLoader();
+
+		unsigned long STDMETHODCALLTYPE AddRef();
+
+		unsigned long STDMETHODCALLTYPE Release();
+
+		STDMETHOD(QueryInterface)(
+			IID const& riid,
+			void** ppvObject);
+
+
+		STDMETHOD(CreateStreamFromKey)(
+			const void* fontFileReferenceKey,
+			UINT32 fontFileReferenceKeySize,
+			IDWriteFontFileStream** fontFileStream);
+	};
+
+	public class TextServiceFontFileStream : public IDWriteFontFileStream
+	{
+	private:
+		long refCount;
+		BYTE* data;
+		long length;
+
+	public:
+
+		TextServiceFontFileStream(
+			BYTE* data,
+			long length);
+
+		unsigned long STDMETHODCALLTYPE AddRef();
+
+		unsigned long STDMETHODCALLTYPE Release();
+
+		STDMETHOD(QueryInterface)(
+			IID const& riid,
+			void** ppvObject);
+
+
+		STDMETHOD(GetFileSize)(
+			UINT64* fileSize);
+
+		STDMETHOD(GetLastWriteTime)(
+			UINT64* lastWriteTime);
+
+		STDMETHOD(ReadFileFragment)(
+			const void** fragmentStart,
+			UINT64 fileOffset,
+			UINT64 fragmentSize,
+			void** fragmentContext);
+
+		STDMETHOD_(void, ReleaseFileFragment)(
+			void* fragmentContext);
 	};
 }

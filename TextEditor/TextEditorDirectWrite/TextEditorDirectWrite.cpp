@@ -63,7 +63,7 @@ namespace TextEditor
 	{
 		_Dispose();
 	}
-
+	
 	HRESULT TextServiceDirectWriteInterop::Reset(
 		Font^ font,
 		int visibleWidth)
@@ -88,6 +88,7 @@ namespace TextEditor
 
 
 		IDWriteFontCollection* fontCollection = NULL;
+		IDWriteFontCollection* fontCollection2 = NULL;
 		IDWriteGdiInterop* gdiInterop = NULL;
 		IDWriteFont* fontD = NULL;
 		IDWriteFontFamily* family = NULL;
@@ -95,6 +96,32 @@ namespace TextEditor
 		IDWriteRenderingParams* renderingParams = NULL;
 		IDWriteBitmapRenderTarget* renderTarget = NULL;
 		IDWriteTextFormat* textFormat = NULL;
+
+		if (TextServiceFontEnumerator::fonts.GetSize() != 0)
+		{
+			// For some reason I don't understand, DWrite is losing track of the registered loader sometimes, but not
+			// always, so for now, always try to register and ignore the "already registered" error.
+			if (customFontCollectionLoader == NULL)
+			{
+				customFontCollectionLoader = new TextServiceFontCollectionLoader();
+			}
+			hr = factory->RegisterFontCollectionLoader(
+				customFontCollectionLoader);
+			if (FAILED(hr) && (hr != DWRITE_E_ALREADYREGISTERED))
+			{
+				goto Error;
+			}
+			if (customFontFileLoader == NULL)
+			{
+				customFontFileLoader = new TextServiceFontLoader();
+			}
+			hr = factory->RegisterFontFileLoader(
+				customFontFileLoader);
+			if (FAILED(hr) && (hr != DWRITE_E_ALREADYREGISTERED))
+			{
+				goto Error;
+			}
+		}
 
 		hr = factory->GetSystemFontCollection(
 			&fontCollection,
@@ -194,12 +221,62 @@ namespace TextEditor
 		const float Scaling = (float)96 / 72;
 		float fontSize = Math::Abs(font->Size * Scaling);
 
-		hr = gdiInterop->CreateFontFromLOGFONT(
-			&logFontStack,
-			&fontD);
-		if (FAILED(hr))
+		// first, try the custom font collection
+		IDWriteFontCollection* fontCollectionActual = NULL; // weak ref; NULL means system collection
+		if (TextServiceFontEnumerator::fonts.GetSize() != 0)
 		{
-			goto Error;
+			DWORD key = 0; // const key: we only ever have one custom font collection
+			hr = factory->CreateCustomFontCollection(
+				customFontCollectionLoader,
+				&key,
+				sizeof(DWORD),
+				&fontCollection2);
+			if (FAILED(hr))
+			{
+				goto Error;
+			}
+			UINT32 index;
+			BOOL exists;
+			hr = fontCollection2->FindFamilyName(
+				logFontStack.lfFaceName,
+				&index,
+				&exists);
+			if (FAILED(hr))
+			{
+				goto Error;
+			}
+			if (exists)
+			{
+				hr = fontCollection2->GetFontFamily(
+					index,
+					&family);
+				if (FAILED(hr))
+				{
+					goto Error;
+				}
+				hr = family->GetFirstMatchingFont(
+					DWRITE_FONT_WEIGHT_NORMAL,
+					DWRITE_FONT_STRETCH_NORMAL,
+					DWRITE_FONT_STYLE_NORMAL,
+					&fontD);
+				if (FAILED(hr))
+				{
+					goto Error;
+				}
+				fontCollectionActual = fontCollection2;
+			}
+		}
+		// if font wasn't found in custom collection, try asking GDI
+		if (fontCollectionActual == NULL)
+		{
+			_ASSERT(fontD == NULL);
+			hr = gdiInterop->CreateFontFromLOGFONT(
+				&logFontStack,
+				&fontD);
+			if (FAILED(hr))
+			{
+				goto Error;
+			}
 		}
 
 		DWRITE_FONT_METRICS fontMetrics;
@@ -235,7 +312,7 @@ namespace TextEditor
 		SafeRelease(&textFormat);
 		hr = factory->CreateTextFormat(
 			familyName,
-			NULL/*service.fontCollection*/, // null: system font collection
+			fontCollectionActual, // NULL: system font collection
 			fontD->GetWeight(),
 			fontD->GetStyle(),
 			fontD->GetStretch(),
@@ -294,6 +371,7 @@ namespace TextEditor
 		SafeRelease(&family);
 		SafeRelease(&fontD);
 		SafeRelease(&fontCollection);
+		SafeRelease(&fontCollection2);
 		SafeRelease(&gdiInterop);
 
 		return hr;
@@ -335,6 +413,11 @@ namespace TextEditor
 		String^ line)
 	{
 		int hr;
+
+		if (line == nullptr)
+		{
+			line = String::Empty;
+		}
 
 		this->service = service;
 		totalChars = line->Length;
@@ -648,10 +731,10 @@ namespace TextEditor
 				metrics[i].width,
 				metrics[i].height);
 			//rectF.Y -= service.baseline;
-			int X = (int)Math::Round(rectF.Left); // rounding must match CharPosToX()
+			int X = (int)Math::Round(rectF.Left * this->service->rdpiY); // rounding must match CharPosToX()
 			//int Y = (int)Math::Floor(rectF.Top);
 			int Y = 0;
-			int Width = (int)Math::Round(rectF.Width + rectF.Left - X); // rounding must match CharPosToX()
+			int Width = (int)Math::Round((rectF.Width + rectF.Left) * this->service->rdpiY - X); // rounding must match CharPosToX()
 			//int Height = (int)Math::Ceiling(rectF.Height + rectF.Top - Y);
 			int Height = service->lineHeight;
 			region->Union(System::Drawing::Rectangle(X, Y, Width, Height));
@@ -683,7 +766,7 @@ namespace TextEditor
 		}
 		_ASSERT(metrics.lineCount <= 1);
 
-		int width = (int)Math::Round(metrics.widthIncludingTrailingWhitespace); // rounding must match CharPosToX(), BuildRegion()
+		int width = (int)Math::Round(metrics.widthIncludingTrailingWhitespace * this->service->rdpiY); // rounding must match CharPosToX(), BuildRegion()
 
 		// Note: height can increase when non-western scripts are introduced (e.g. Arabic and or Devanagari)
 		// and font substitution decides it needs more space to comfortably display the text,
@@ -720,7 +803,7 @@ namespace TextEditor
 			goto Error;
 		}
 
-		x = (int)Math::Round(x1); // rounding must match BuildRegion()
+		x = (int)Math::Round(x1 * this->service->rdpiY); // rounding must match BuildRegion()
 
 	Error:
 		return hr;
@@ -737,7 +820,7 @@ namespace TextEditor
 		BOOL inside, trailing1;
 		DWRITE_HIT_TEST_METRICS metric;
 		hr = textLayout->HitTestPoint(
-			(float)x,
+			(float)(x / this->service->rdpiY),
 			(float)0,
 			&trailing1,
 			&inside,
@@ -815,7 +898,7 @@ namespace TextEditor
 			*ppvObject = NULL;
 			return E_NOINTERFACE;
 		}
-		InterlockedIncrement(&refCount); // TODO: valid?
+		InterlockedIncrement(&refCount);
 		return S_OK;
 	}
 
@@ -901,5 +984,310 @@ namespace TextEditor
 		__maybenull IUnknown* clientDrawingEffect)
 	{
 		return E_NOTIMPL;
+	}
+
+
+	//
+
+	// https://msdn.microsoft.com/en-us/library/windows/desktop/ee264312%28v=vs.85%29.aspx
+
+	//
+
+	TextServiceFontCollectionLoader::TextServiceFontCollectionLoader()
+	{
+		this->refCount = 1;
+	}
+
+	unsigned long STDMETHODCALLTYPE TextServiceFontCollectionLoader::AddRef()
+	{
+		return InterlockedIncrement(&refCount);
+	}
+
+	unsigned long STDMETHODCALLTYPE TextServiceFontCollectionLoader::Release()
+	{
+		if (InterlockedDecrement(&refCount) == 0)
+		{
+			delete this;
+			return 0;
+		}
+		return refCount;
+	}
+
+	HRESULT TextServiceFontCollectionLoader::QueryInterface(
+		IID const& riid,
+		void** ppvObject)
+	{
+		if (__uuidof(IUnknown) == riid)
+		{
+			*ppvObject = static_cast<IUnknown*>(this);
+		}
+		else if (__uuidof(IDWriteFontCollectionLoader) == riid)
+		{
+			*ppvObject = static_cast<IDWriteFontCollectionLoader*>(this);
+		}
+		else
+		{
+			*ppvObject = NULL;
+			return E_NOINTERFACE;
+		}
+		InterlockedIncrement(&refCount);
+		return S_OK;
+	}
+
+	HRESULT TextServiceFontCollectionLoader::CreateEnumeratorFromKey(
+		IDWriteFactory* factory,
+		const void* collectionKey,
+		UINT32 collectionKeySize,
+		IDWriteFontFileEnumerator** fontFileEnumerator)
+	{
+		*fontFileEnumerator = new TextServiceFontEnumerator(factory);
+		return S_OK;
+	}
+
+
+	//
+
+
+	void TextServiceFontEnumeratorHelper::AddFont(INT64 data, int length)
+	{
+		TextServiceFontEnumerator::AddFont((BYTE*)data, length);
+	}
+
+
+	//
+
+	TextServiceFontEnumerator::TextServiceFontEnumerator(
+		IDWriteFactory* factory)
+	{
+		this->refCount = 1;
+		this->index = -1;
+		this->factory = factory;
+		factory->AddRef();
+	}
+
+	TextServiceFontEnumerator::~TextServiceFontEnumerator()
+	{
+		SafeRelease(&factory);
+	}
+
+	CSimpleArray<BYTE*> TextServiceFontEnumerator::fonts;
+	CSimpleArray<long> TextServiceFontEnumerator::lengths;
+
+	void TextServiceFontEnumerator::AddFont(BYTE* data, int length)
+	{
+		BYTE* copy = new BYTE[length];
+		memcpy(copy, data, length);
+		fonts.Add(copy);
+		lengths.Add(length);
+	}
+
+	unsigned long STDMETHODCALLTYPE TextServiceFontEnumerator::AddRef()
+	{
+		return InterlockedIncrement(&refCount);
+	}
+
+	unsigned long STDMETHODCALLTYPE TextServiceFontEnumerator::Release()
+	{
+		if (InterlockedDecrement(&refCount) == 0)
+		{
+			delete this;
+			return 0;
+		}
+		return refCount;
+	}
+
+	HRESULT TextServiceFontEnumerator::QueryInterface(
+		IID const& riid,
+		void** ppvObject)
+	{
+		if (__uuidof(IUnknown) == riid)
+		{
+			*ppvObject = static_cast<IUnknown*>(this);
+		}
+		else if (__uuidof(IDWriteFontFileEnumerator) == riid)
+		{
+			*ppvObject = static_cast<IDWriteFontFileEnumerator*>(this);
+		}
+		else
+		{
+			*ppvObject = NULL;
+			return E_NOINTERFACE;
+		}
+		InterlockedIncrement(&refCount);
+		return S_OK;
+	}
+
+	HRESULT TextServiceFontEnumerator::GetCurrentFontFile(
+		IDWriteFontFile** fontFile)
+	{
+		HRESULT hr;
+
+		DWORD key = index;
+		hr = factory->CreateCustomFontFileReference(
+			&key,
+			sizeof(DWORD),
+			TextServiceDirectWriteInterop::customFontFileLoader,
+			fontFile);
+		if (FAILED(hr))
+		{
+			goto Error;
+		}
+
+	Error:
+		return hr;
+	}
+
+	HRESULT TextServiceFontEnumerator::MoveNext(
+		BOOL* hasCurrentFile)
+	{
+		*hasCurrentFile = false;
+		if (this->index + 1 < fonts.GetSize())
+		{
+			*hasCurrentFile = true;
+		}
+		this->index++;
+		return S_OK;
+	}
+
+
+	//
+
+	TextServiceFontLoader::TextServiceFontLoader()
+	{
+		this->refCount = 1;
+	}
+
+	unsigned long STDMETHODCALLTYPE TextServiceFontLoader::AddRef()
+	{
+		return InterlockedIncrement(&refCount);
+	}
+
+	unsigned long STDMETHODCALLTYPE TextServiceFontLoader::Release()
+	{
+		if (InterlockedDecrement(&refCount) == 0)
+		{
+			delete this;
+			return 0;
+		}
+		return refCount;
+	}
+
+	HRESULT TextServiceFontLoader::QueryInterface(
+		IID const& riid,
+		void** ppvObject)
+	{
+		if (__uuidof(IUnknown) == riid)
+		{
+			*ppvObject = static_cast<IUnknown*>(this);
+		}
+		else if (__uuidof(IDWriteFontFileLoader) == riid)
+		{
+			*ppvObject = static_cast<IDWriteFontFileLoader*>(this);
+		}
+		else
+		{
+			*ppvObject = NULL;
+			return E_NOINTERFACE;
+		}
+		InterlockedIncrement(&refCount);
+		return S_OK;
+	}
+
+	HRESULT TextServiceFontLoader::CreateStreamFromKey(
+		const void* fontFileReferenceKey,
+		UINT32 fontFileReferenceKeySize,
+		IDWriteFontFileStream** fontFileStream)
+	{
+		_ASSERT(fontFileReferenceKeySize == sizeof(DWORD));
+		int index = *(DWORD*)fontFileReferenceKey;
+
+		*fontFileStream = new TextServiceFontFileStream(
+			TextServiceFontEnumerator::fonts[index],
+			TextServiceFontEnumerator::lengths[index]);
+
+		return S_OK;
+	}
+
+
+	//
+
+	TextServiceFontFileStream::TextServiceFontFileStream(
+		BYTE* data,
+		long length)
+	{
+		this->refCount = 1;
+		this->data = data;
+		this->length = length;
+	}
+
+	unsigned long STDMETHODCALLTYPE TextServiceFontFileStream::AddRef()
+	{
+		return InterlockedIncrement(&refCount);
+	}
+
+	unsigned long STDMETHODCALLTYPE TextServiceFontFileStream::Release()
+	{
+		if (InterlockedDecrement(&refCount) == 0)
+		{
+			delete this;
+			return 0;
+		}
+		return refCount;
+	}
+
+	HRESULT TextServiceFontFileStream::QueryInterface(
+		IID const& riid,
+		void** ppvObject)
+	{
+		if (__uuidof(IUnknown) == riid)
+		{
+			*ppvObject = static_cast<IUnknown*>(this);
+		}
+		else if (__uuidof(IDWriteFontFileStream) == riid)
+		{
+			*ppvObject = static_cast<IDWriteFontFileStream*>(this);
+		}
+		else
+		{
+			*ppvObject = NULL;
+			return E_NOINTERFACE;
+		}
+		InterlockedIncrement(&refCount);
+		return S_OK;
+	}
+
+	HRESULT TextServiceFontFileStream::GetFileSize(
+		UINT64* fileSize)
+	{
+		*fileSize = length;
+		return S_OK;
+	}
+
+	HRESULT TextServiceFontFileStream::GetLastWriteTime(
+		UINT64* lastWriteTime)
+	{
+		*lastWriteTime = 0;
+		return S_OK;
+	}
+
+	HRESULT TextServiceFontFileStream::ReadFileFragment(
+		const void** fragmentStart,
+		UINT64 fileOffset,
+		UINT64 fragmentSize,
+		void** fragmentContext)
+	{
+		BYTE* target = new BYTE[fragmentSize];
+		*fragmentContext = target;
+		*fragmentStart = target;
+
+		memcpy(target, (BYTE*)data + fileOffset, fragmentSize);
+
+		return S_OK;
+	}
+
+	void TextServiceFontFileStream::ReleaseFileFragment(
+		void* fragmentContext)
+	{
+		delete (BYTE*)fragmentContext;
 	}
 }
