@@ -260,58 +260,68 @@ namespace TextEditor
             switch (e.KeyCode)
             {
                 case Keys.Back:
-                    if (!readOnly)
-                    {
-                        if (SelectionNonEmpty)
-                        {
-                            Clear(); // notifies changeListener
-                        }
-                        else
-                        {
-                            if (SelectionStartChar == 0)
-                            {
-                                if (SelectionStartLine > 0)
-                                {
-                                    /* delete carriage return */
-                                    DeleteLineBreakLeft();
-                                }
-                                /* else, can't delete past start of file */
-                            }
-                            else
-                            {
-                                DeleteCharLeft();
-                            }
-                        }
-                    }
+                    PerformBackspaceKeyAction();
                     e.Handled = true;
                     break;
 
                 case Keys.Delete:
-                    if (!readOnly)
-                    {
-                        if (SelectionNonEmpty)
-                        {
-                            Clear(); // notifies changeListener
-                        }
-                        else
-                        {
-                            if (SelectionStartChar == GetLine(SelectionStartLine).Length)
-                            {
-                                if (SelectionStartLine < this.Count - 1)
-                                {
-                                    /* delete carriage return */
-                                    DeleteLineBreakRight();
-                                }
-                                /* else, can't delete past end of file */
-                            }
-                            else
-                            {
-                                DeleteCharRight();
-                            }
-                        }
-                    }
+                    PerformDeleteKeyAction();
                     e.Handled = true;
                     break;
+            }
+        }
+
+        public void PerformBackspaceKeyAction()
+        {
+            if (!readOnly)
+            {
+                if (SelectionNonEmpty)
+                {
+                    Clear(); // notifies changeListener
+                }
+                else
+                {
+                    if (SelectionStartChar == 0)
+                    {
+                        if (SelectionStartLine > 0)
+                        {
+                            /* delete carriage return */
+                            DeleteLineBreakLeft();
+                        }
+                        /* else, can't delete past start of file */
+                    }
+                    else
+                    {
+                        DeleteCharLeft();
+                    }
+                }
+            }
+        }
+
+        public void PerformDeleteKeyAction()
+        {
+            if (!readOnly)
+            {
+                if (SelectionNonEmpty)
+                {
+                    Clear(); // notifies changeListener
+                }
+                else
+                {
+                    if (SelectionStartChar == GetLine(SelectionStartLine).Length)
+                    {
+                        if (SelectionStartLine < this.Count - 1)
+                        {
+                            /* delete carriage return */
+                            DeleteLineBreakRight();
+                        }
+                        /* else, can't delete past end of file */
+                    }
+                    else
+                    {
+                        DeleteCharRight();
+                    }
+                }
             }
         }
 
@@ -322,7 +332,7 @@ namespace TextEditor
         /* from the beginning of the line.  It will not remove non-whitespace characters */
         public void ShiftSelectionLeftOneTab()
         {
-            ProcessLines(delegate(ITextStorage text)
+            ProcessLines(delegate (ITextStorage text)
             {
                 for (int i = 0; i < text.Count; i++)
                 {
@@ -362,7 +372,7 @@ namespace TextEditor
         /* beginning of each line. */
         public void ShiftSelectionRightOneTab()
         {
-            ProcessLines(delegate(ITextStorage text)
+            ProcessLines(delegate (ITextStorage text)
             {
                 ITextStorage tab = TextStorageFactory.FromUtf16Buffer("\t", 0, 1, Environment.NewLine);
 
@@ -378,7 +388,7 @@ namespace TextEditor
 
         public void TrimTrailingSpaces()
         {
-            ProcessLines(delegate(ITextStorage text)
+            ProcessLines(delegate (ITextStorage text)
             {
                 for (int i = 0; i < text.Count; i++)
                 {
@@ -415,7 +425,7 @@ namespace TextEditor
         /* convert all tab characters in the selection to the appropriate number of spaces */
         public void ConvertTabsToSpaces()
         {
-            ProcessLines(delegate(ITextStorage text)
+            ProcessLines(delegate (ITextStorage text)
             {
                 for (int i = 0; i < text.Count; i++)
                 {

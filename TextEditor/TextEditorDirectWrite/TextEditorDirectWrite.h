@@ -32,10 +32,45 @@ namespace TextEditor
 {
 	//
 
-	public ref class TextServiceDirectWriteInterop
+	public class TextServiceDirectWriteGlobals
 	{
 	public:
 		IDWriteFactory* factory;
+		IDWriteFontCollectionLoader* customFontCollectionLoader;
+		IDWriteFontFileLoader* customFontFileLoader;
+		CSimpleArray<BYTE*> fonts;
+		CSimpleArray<long> lengths;
+
+	public:
+		TextServiceDirectWriteGlobals();
+
+		~TextServiceDirectWriteGlobals();
+
+		void _Dispose();
+
+		void AddFont(BYTE* data, int length);
+	};
+
+	public ref class TextServiceDirectWriteGlobalsHandle
+	{
+	public:
+		TextServiceDirectWriteGlobals* globals;
+
+	public:
+		TextServiceDirectWriteGlobalsHandle();
+
+		void AddFont(INT64 data, int length);
+
+		void _Dispose();
+	};
+
+
+	//
+
+	public ref class TextServiceDirectWriteInterop
+	{
+	public:
+		TextServiceDirectWriteGlobals* globals; // do not delete
 
 		IDWriteRenderingParams* renderingParams;
 
@@ -47,11 +82,6 @@ namespace TextEditor
 		IDWriteBitmapRenderTarget* renderTarget; // contains offscreen strip
 		float rdpiX, rdpiY;
 
-		static IDWriteFontCollectionLoader* customFontCollectionLoader;
-
-	public:
-		static IDWriteFontFileLoader* customFontFileLoader;
-
 	public:
 
 		TextServiceDirectWriteInterop();
@@ -61,6 +91,7 @@ namespace TextEditor
 		!TextServiceDirectWriteInterop();
 
 		HRESULT Reset(
+			TextServiceDirectWriteGlobalsHandle^ globalsHandle,
 			Font^ font,
 			int visibleWidth);
 
@@ -214,10 +245,12 @@ namespace TextEditor
 	{
 	private:
 		long refCount;
+		TextServiceDirectWriteGlobals* globals;
 
 	public:
 
-		TextServiceFontCollectionLoader();
+		TextServiceFontCollectionLoader(
+			TextServiceDirectWriteGlobals* globals);
 
 		unsigned long STDMETHODCALLTYPE AddRef();
 
@@ -235,29 +268,19 @@ namespace TextEditor
 			IDWriteFontFileEnumerator** fontFileEnumerator);
 	};
 
-	public ref class TextServiceFontEnumeratorHelper
-	{
-	public:
-		static void AddFont(INT64 data, int length);
-	};
-
 	public class TextServiceFontEnumerator : public IDWriteFontFileEnumerator
 	{
 	private:
 		long refCount;
 		long index;
 		IDWriteFactory* factory;
-
-	public:
-		static CSimpleArray<BYTE*> fonts;
-		static CSimpleArray<long> lengths;
-
-		static void AddFont(BYTE* data, int length);
+		TextServiceDirectWriteGlobals* globals;
 
 	public:
 
 		TextServiceFontEnumerator(
-			IDWriteFactory* factory);
+			IDWriteFactory* factory,
+			TextServiceDirectWriteGlobals* globals);
 
 		~TextServiceFontEnumerator();
 
@@ -281,10 +304,12 @@ namespace TextEditor
 	{
 	private:
 		long refCount;
+		TextServiceDirectWriteGlobals* globals;
 
 	public:
 
-		TextServiceFontLoader();
+		TextServiceFontLoader(
+			TextServiceDirectWriteGlobals* globals);
 
 		unsigned long STDMETHODCALLTYPE AddRef();
 

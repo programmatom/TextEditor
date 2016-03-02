@@ -50,6 +50,61 @@ namespace TextEditor
 
 	//
 
+	TextServiceDirectWriteGlobals::TextServiceDirectWriteGlobals()
+	{
+		customFontCollectionLoader = NULL;
+		customFontFileLoader = NULL;
+		factory = NULL;
+	}
+
+	TextServiceDirectWriteGlobals::~TextServiceDirectWriteGlobals()
+	{
+		_Dispose();
+	}
+
+	void TextServiceDirectWriteGlobals::_Dispose()
+	{
+		if (customFontCollectionLoader != NULL)
+		{
+			factory->UnregisterFontCollectionLoader(customFontCollectionLoader);
+		}
+		if (customFontFileLoader != NULL)
+		{
+			factory->UnregisterFontFileLoader(customFontFileLoader);
+		}
+		SafeRelease(&customFontCollectionLoader);
+		SafeRelease(&customFontFileLoader);
+		SafeRelease(&factory);
+	}
+
+	void TextServiceDirectWriteGlobals::AddFont(BYTE* data, int length)
+	{
+		BYTE* copy = new BYTE[length];
+		memcpy(copy, data, length);
+		fonts.Add(copy);
+		lengths.Add(length);
+	}
+
+
+	TextServiceDirectWriteGlobalsHandle::TextServiceDirectWriteGlobalsHandle()
+	{
+		globals = new TextServiceDirectWriteGlobals();
+	}
+
+	void TextServiceDirectWriteGlobalsHandle::AddFont(INT64 data, int length)
+	{
+		globals->AddFont((BYTE*)data, length);
+	}
+
+	void TextServiceDirectWriteGlobalsHandle::_Dispose()
+	{
+		delete globals;
+		globals = NULL;
+	}
+
+
+	//
+
 	TextServiceDirectWriteInterop::TextServiceDirectWriteInterop()
 	{
 	}
@@ -65,6 +120,7 @@ namespace TextEditor
 	}
 	
 	HRESULT TextServiceDirectWriteInterop::Reset(
+		TextServiceDirectWriteGlobalsHandle^ globalsHandle,
 		Font^ font,
 		int visibleWidth)
 	{
@@ -72,7 +128,9 @@ namespace TextEditor
 
 		int hr;
 
-		if (this->factory == NULL)
+		this->globals = globalsHandle->globals;
+
+		if (globals->factory == NULL)
 		{
 			IDWriteFactory* factory;
 			hr = DWriteCreateFactory(
@@ -83,7 +141,7 @@ namespace TextEditor
 			{
 				return hr;
 			}
-			this->factory = factory;
+			globals->factory = factory;
 		}
 
 
@@ -97,33 +155,33 @@ namespace TextEditor
 		IDWriteBitmapRenderTarget* renderTarget = NULL;
 		IDWriteTextFormat* textFormat = NULL;
 
-		if (TextServiceFontEnumerator::fonts.GetSize() != 0)
+		if (globals->fonts.GetSize() != 0)
 		{
 			// For some reason I don't understand, DWrite is losing track of the registered loader sometimes, but not
 			// always, so for now, always try to register and ignore the "already registered" error.
-			if (customFontCollectionLoader == NULL)
+			if (globals->customFontCollectionLoader == NULL)
 			{
-				customFontCollectionLoader = new TextServiceFontCollectionLoader();
+				globals->customFontCollectionLoader = new TextServiceFontCollectionLoader(globals);
 			}
-			hr = factory->RegisterFontCollectionLoader(
-				customFontCollectionLoader);
+			hr = globals->factory->RegisterFontCollectionLoader(
+				globals->customFontCollectionLoader);
 			if (FAILED(hr) && (hr != DWRITE_E_ALREADYREGISTERED))
 			{
 				goto Error;
 			}
-			if (customFontFileLoader == NULL)
+			if (globals->customFontFileLoader == NULL)
 			{
-				customFontFileLoader = new TextServiceFontLoader();
+				globals->customFontFileLoader = new TextServiceFontLoader(globals);
 			}
-			hr = factory->RegisterFontFileLoader(
-				customFontFileLoader);
+			hr = globals->factory->RegisterFontFileLoader(
+				globals->customFontFileLoader);
 			if (FAILED(hr) && (hr != DWRITE_E_ALREADYREGISTERED))
 			{
 				goto Error;
 			}
 		}
 
-		hr = factory->GetSystemFontCollection(
+		hr = globals->factory->GetSystemFontCollection(
 			&fontCollection,
 			false/*checkForUpdates*/);
 		if (FAILED(hr))
@@ -131,13 +189,13 @@ namespace TextEditor
 			goto Error;
 		}
 
-		hr = factory->GetGdiInterop(&gdiInterop);
+		hr = globals->factory->GetGdiInterop(&gdiInterop);
 		if (FAILED(hr))
 		{
 			goto Error;
 		}
 
-		hr = factory->CreateRenderingParams(
+		hr = globals->factory->CreateRenderingParams(
 			&renderingParams); // "default settings for the primary monitor"
 		if (FAILED(hr))
 		{
@@ -223,11 +281,11 @@ namespace TextEditor
 
 		// first, try the custom font collection
 		IDWriteFontCollection* fontCollectionActual = NULL; // weak ref; NULL means system collection
-		if (TextServiceFontEnumerator::fonts.GetSize() != 0)
+		if (globals->fonts.GetSize() != 0)
 		{
 			DWORD key = 0; // const key: we only ever have one custom font collection
-			hr = factory->CreateCustomFontCollection(
-				customFontCollectionLoader,
+			hr = globals->factory->CreateCustomFontCollection(
+				globals->customFontCollectionLoader,
 				&key,
 				sizeof(DWORD),
 				&fontCollection2);
@@ -310,7 +368,7 @@ namespace TextEditor
 		}
 
 		SafeRelease(&textFormat);
-		hr = factory->CreateTextFormat(
+		hr = globals->factory->CreateTextFormat(
 			familyName,
 			fontCollectionActual, // NULL: system font collection
 			fontD->GetWeight(),
@@ -380,8 +438,6 @@ namespace TextEditor
 	void TextServiceDirectWriteInterop::_Dispose()
 	{
 		ClearCaches();
-
-		SafeRelease(&factory);
 	}
 
 	void TextServiceDirectWriteInterop::ClearCaches()
@@ -428,7 +484,7 @@ namespace TextEditor
 		pin_ptr<const wchar_t> wzLine = PtrToStringChars(line);
 		wcsncpy_s(pwzLine, line->Length + 1, wzLine, line->Length);
 #if 1 // choose
-		hr = service->factory->CreateTextLayout(
+		hr = service->globals->factory->CreateTextLayout(
 			pwzLine,
 			line->Length,
 			service->textFormat,
@@ -466,6 +522,7 @@ namespace TextEditor
 
 	void TextServiceLineDirectWriteInterop::_Dispose()
 	{
+		service = nullptr;
 		SafeRelease(&textLayout);
 	}
 
@@ -993,9 +1050,11 @@ namespace TextEditor
 
 	//
 
-	TextServiceFontCollectionLoader::TextServiceFontCollectionLoader()
+	TextServiceFontCollectionLoader::TextServiceFontCollectionLoader(
+		TextServiceDirectWriteGlobals* globals)
 	{
 		this->refCount = 1;
+		this->globals = globals;
 	}
 
 	unsigned long STDMETHODCALLTYPE TextServiceFontCollectionLoader::AddRef()
@@ -1040,45 +1099,27 @@ namespace TextEditor
 		UINT32 collectionKeySize,
 		IDWriteFontFileEnumerator** fontFileEnumerator)
 	{
-		*fontFileEnumerator = new TextServiceFontEnumerator(factory);
+		*fontFileEnumerator = new TextServiceFontEnumerator(factory, globals);
 		return S_OK;
 	}
 
 
 	//
 
-
-	void TextServiceFontEnumeratorHelper::AddFont(INT64 data, int length)
-	{
-		TextServiceFontEnumerator::AddFont((BYTE*)data, length);
-	}
-
-
-	//
-
 	TextServiceFontEnumerator::TextServiceFontEnumerator(
-		IDWriteFactory* factory)
+		IDWriteFactory* factory,
+		TextServiceDirectWriteGlobals* globals)
 	{
 		this->refCount = 1;
 		this->index = -1;
 		this->factory = factory;
 		factory->AddRef();
+		this->globals = globals;
 	}
 
 	TextServiceFontEnumerator::~TextServiceFontEnumerator()
 	{
 		SafeRelease(&factory);
-	}
-
-	CSimpleArray<BYTE*> TextServiceFontEnumerator::fonts;
-	CSimpleArray<long> TextServiceFontEnumerator::lengths;
-
-	void TextServiceFontEnumerator::AddFont(BYTE* data, int length)
-	{
-		BYTE* copy = new BYTE[length];
-		memcpy(copy, data, length);
-		fonts.Add(copy);
-		lengths.Add(length);
 	}
 
 	unsigned long STDMETHODCALLTYPE TextServiceFontEnumerator::AddRef()
@@ -1126,7 +1167,7 @@ namespace TextEditor
 		hr = factory->CreateCustomFontFileReference(
 			&key,
 			sizeof(DWORD),
-			TextServiceDirectWriteInterop::customFontFileLoader,
+			globals->customFontFileLoader,
 			fontFile);
 		if (FAILED(hr))
 		{
@@ -1141,7 +1182,7 @@ namespace TextEditor
 		BOOL* hasCurrentFile)
 	{
 		*hasCurrentFile = false;
-		if (this->index + 1 < fonts.GetSize())
+		if (this->index + 1 < globals->fonts.GetSize())
 		{
 			*hasCurrentFile = true;
 		}
@@ -1152,9 +1193,11 @@ namespace TextEditor
 
 	//
 
-	TextServiceFontLoader::TextServiceFontLoader()
+	TextServiceFontLoader::TextServiceFontLoader(
+		TextServiceDirectWriteGlobals* globals)
 	{
 		this->refCount = 1;
+		this->globals = globals;
 	}
 
 	unsigned long STDMETHODCALLTYPE TextServiceFontLoader::AddRef()
@@ -1202,8 +1245,8 @@ namespace TextEditor
 		int index = *(DWORD*)fontFileReferenceKey;
 
 		*fontFileStream = new TextServiceFontFileStream(
-			TextServiceFontEnumerator::fonts[index],
-			TextServiceFontEnumerator::lengths[index]);
+			globals->fonts[index],
+			globals->lengths[index]);
 
 		return S_OK;
 	}

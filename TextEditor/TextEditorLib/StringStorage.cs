@@ -50,8 +50,13 @@ namespace TextEditor
 
             ~StringStorageDecodedLine()
             {
-                Debug.Assert(false, "TextStorageDecodedLine: Finalizer invoked - have you forgotten to .Dispose()?");
+#if DEBUG
+                Debug.Assert(false, this.GetType().Name + " finalizer invoked - have you forgotten to .Dispose()? " + allocatedFrom.ToString());
+#endif
             }
+#if DEBUG
+            private readonly StackTrace allocatedFrom = new StackTrace(true);
+#endif
 
             public void Dispose()
             {

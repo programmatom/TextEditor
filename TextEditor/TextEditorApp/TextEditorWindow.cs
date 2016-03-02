@@ -444,6 +444,16 @@ namespace TextEditor
                 textEditControl.TextService);
 
             base.OnShown(e);
+
+            // This is a hack for high-DPI. For some reason the toolStrip lays out with a certain height and stubbornly sticks
+            // to that height until this point. After this point, the first TextEditControl.Resize that happens causes toolStrip
+            // to lose a couple of pixels of height. Since it's disconcerting to click or type and have everything shift a bit,
+            // we trigger the adjustment immediately after shown, when its less visually disturbing.
+            SuspendLayout();
+            Size size = textEditControl.MinimumSize;
+            textEditControl.MinimumSize = new Size(1, 1);
+            textEditControl.MinimumSize = size;
+            ResumeLayout();
         }
 
         protected override void OnResizeEnd(EventArgs e)
@@ -971,8 +981,9 @@ namespace TextEditor
 
             using (Stream stream = tempStream)
             {
-                if (includeByteOrderMarkToolStripMenuItem.Checked)
+                if (includeBom)
                 {
+                    Debug.Assert(encoding != Encoding_ANSI);
                     if (encoding == Encoding_UTF16)
                     {
                         stream.Write(new byte[2] { 0xFF, 0xFE }, 0, 2);

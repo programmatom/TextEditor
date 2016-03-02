@@ -110,8 +110,10 @@
     <Compile Include="GoToDialog.designer.cs">
       <DependentUpon>GoToDialog.cs</DependentUpon>
     </Compile>
+    <Compile Include="Hacks.cs" />
     <Compile Include="ITextService.cs" />
     <Compile Include="ITextStorage.cs" />
+    <Compile Include="LineWidthCache.cs" />
     <Compile Include="Marshal2.cs" />
     <Compile Include="Pinning.cs" />
     <Compile Include="Properties\AssemblyInfo.cs" />

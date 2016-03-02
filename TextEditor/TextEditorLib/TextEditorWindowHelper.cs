@@ -550,6 +550,11 @@ namespace TextEditor
                 findAgainToolStripMenuItem_Click(null, null);
                 result = true;
             }
+            if (keyData == Keys.Delete)
+            {
+                textEditControl.PerformDeleteKeyAction();
+                result = true;
+            }
 
             modifierKeys = 0;
 

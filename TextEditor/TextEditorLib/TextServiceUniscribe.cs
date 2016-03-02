@@ -77,9 +77,14 @@ namespace TextEditor
 
         ~TextServiceUniscribe()
         {
-            Debug.Assert(false, "TextServiceUniscribe: Finalizer invoked - have you forgotten to .Dispose()?");
+#if DEBUG
+            Debug.Assert(false, this.GetType().Name + " finalizer invoked - have you forgotten to .Dispose()? " + allocatedFrom.ToString());
+#endif
             Dispose();
         }
+#if DEBUG
+        private readonly StackTrace allocatedFrom = new StackTrace(true);
+#endif
 
         public void Dispose()
         {
@@ -161,6 +166,7 @@ namespace TextEditor
         public ITextInfo AnalyzeText(
             Graphics graphics,
             Font font,
+            int fontHeight,
             string line)
         {
             if (line.IndexOfAny(new char[] { '\r', '\n' }) >= 0)
@@ -173,7 +179,7 @@ namespace TextEditor
             {
                 using (GraphicsHDC hdc = new GraphicsHDC(graphics))
                 {
-                    offscreenStrip = new GDIBitmap(visibleWidth, font.Height, hdc);
+                    offscreenStrip = new GDIBitmap(visibleWidth, fontHeight, hdc);
                 }
                 Debug.Assert(hdcOffscreenStrip == null);
                 hdcOffscreenStrip = GDIDC.Create(offscreenStrip);
@@ -185,21 +191,24 @@ namespace TextEditor
                     this,
                     hdcOffscreenStrip,
                     pinLine.AddrOfPinnedObject(),
-                    new FontRunInfo[] { new FontRunInfo(line.Length, font) });
+                    new FontRunInfo[] { new FontRunInfo(line.Length, font, fontHeight) });
             }
         }
 
         private class FontRunInfo
         {
-            public int count;
-            public Font font;
+            public readonly int count;
+            public readonly Font font;
+            public readonly int fontHeight;
 
             public FontRunInfo(
                 int count,
-                Font font)
+                Font font,
+                int fontHeight)
             {
                 this.count = count;
                 this.font = font;
+                this.fontHeight = fontHeight;
             }
         }
 
@@ -252,9 +261,14 @@ namespace TextEditor
 
             ~TextItems()
             {
-                Debug.Assert(false, "TextServiceUniscribe.TextItems: Finalizer invoked - have you forgotten to .Dispose()?");
+#if DEBUG
+                Debug.Assert(false, this.GetType().Name + " finalizer invoked - have you forgotten to .Dispose()? " + allocatedFrom.ToString());
+#endif
                 Dispose();
             }
+#if DEBUG
+            private readonly StackTrace allocatedFrom = new StackTrace(true);
+#endif
 
             public void Dispose()
             {
@@ -292,7 +306,7 @@ namespace TextEditor
                     for (int i = 0; i < fontRuns.Length; i++)
                     {
                         o.count += fontRuns[i].count;
-                        o.lineHeight = Math.Max(o.lineHeight, fontRuns[i].font.Height);
+                        o.lineHeight = Math.Max(o.lineHeight, fontRuns[i].fontHeight);
                     }
                     if (o.count == 0)
                     {

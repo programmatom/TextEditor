@@ -39,11 +39,13 @@ namespace TextEditor
         {
             private readonly Pin<string> pinLine;
             private readonly Font font;
+            private readonly int fontHeight;
             private readonly Size size;
 
-            public TextInfoSimple(string line, Font font, Size size)
+            public TextInfoSimple(string line, Font font, int fontHeight, Size size)
             {
                 this.font = font;
+                this.fontHeight = fontHeight;
                 this.size = size;
 
                 pinLine = new Pin<string>(new String((char)0, line.Length));
@@ -134,7 +136,7 @@ namespace TextEditor
                 {
                     rect = new Rectangle(
                         position,
-                        new Size(GetExtent(graphics).Width, font.Height));
+                        new Size(GetExtent(graphics).Width, fontHeight));
                 }
                 else
                 {
@@ -150,7 +152,7 @@ namespace TextEditor
                         endPosPlusOne);
                     rect = new Rectangle(
                         new Point(prefixWidth + position.X, position.Y),
-                        new Size(twoWidth - prefixWidth, font.Height));
+                        new Size(twoWidth - prefixWidth, fontHeight));
                 }
 
                 return new Region(rect);
@@ -343,6 +345,7 @@ namespace TextEditor
         public ITextInfo AnalyzeText(
             Graphics graphics,
             Font font,
+            int fontHeight,
             string line)
         {
             if (line.IndexOfAny(new char[] { '\r', '\n' }) >= 0)
@@ -359,6 +362,7 @@ namespace TextEditor
             return new TextInfoSimple(
                 line,
                 font,
+                fontHeight,
                 size);
         }
 

@@ -20,9 +20,10 @@
  * 
 */
 using System;
+using System.Collections;
 using System.Collections.Generic;
 using System.ComponentModel;
-using System.Diagnostics;   
+using System.Diagnostics;
 using System.Drawing;
 using System.Drawing.Drawing2D;
 using System.IO;
@@ -120,9 +121,14 @@ namespace TextEditor
 
         ~TextViewControl()
         {
-            Debug.Assert(false, "TextViewControl: Finalizer invoked - have you forgotten to .Dispose()?");
+#if DEBUG
+            Debug.Assert(false, this.GetType().Name + " finalizer invoked - have you forgotten to .Dispose()? " + allocatedFrom.ToString());
+#endif
             DisposeThis();
         }
+#if DEBUG
+        private readonly StackTrace allocatedFrom = new StackTrace(true);
+#endif
 
         private void DisposeThis()
         {
@@ -185,7 +191,7 @@ namespace TextEditor
             DisposeGraphicsObjects(); // force recreate offscreen strip
             textService.Reset(Font, ClientWidth);
 
-            RecomputeCanvasSize();
+            RecomputeCanvasSizeIncremental();
 
             //Invalidate();
         }
@@ -239,8 +245,13 @@ namespace TextEditor
 
             fontHeight = FontHeight;
 
+            if (textService.Service != TextService.DirectWrite)
+            {
+                fontHeight = FontHeightHack.GetActualFontHeight(Font, fontHeight);
+            }
+
             VerticalScroll.SmallChange = fontHeight;
-            RecomputeCanvasSize();
+            ResetCanvasSize();
             SetStickyX();
             Invalidate();
         }
@@ -358,21 +369,15 @@ namespace TextEditor
 
         protected int ClientHeight { get { return ClientSize.Height; } }
 
-        private void RecomputeCanvasSizeForAutoSize()
+        // recompute canvas size from scratch - for use with global changes such as tab width or font change
+        private void ResetCanvasSize()
         {
-            Debug.Assert(AutoSize);
-
-            currentWidth = 0; // allow shrink
-            RecomputeCanvasSizePartialHelper(0, textStorage.Count, false/*includeClientWidthAndOverflow*/);
-
-            Size size = new Size(currentWidth, FontHeight * textStorage.Count);
-            if (this.Size != size)
-            {
-                this.Size = size; // constraint to MinimumSize taken care of by .NET base class
-            }
+            ResetCanvasSizeCaches();
+            RecomputeCanvasSizeIncremental();
         }
 
-        private void RecomputeCanvasSize()
+        // recompute canvas size incrementally
+        private void RecomputeCanvasSizeIncremental()
         {
             if (textStorageFactory == null)
             {
@@ -380,95 +385,48 @@ namespace TextEditor
             }
             ValidateHardened();
 
-            currentWidth = 0;
-
             if (AutoSize)
             {
-                RecomputeCanvasSizeForAutoSize();
-                return;
-            }
-
-            const bool Exact = false; // Exact is too slow for large files
-            if (Exact)
-            {
-                RecomputeCanvasSizePartial(0, textStorage.Count - 1);
+                RecomputeCanvasSizeExactForAutoSize();
             }
             else
             {
-                RecomputeCanvasSizeEstimated();
+                // Exact recalc is too slow for large files. Instead, only the lines near the viewport are used to compute
+                // canvas size. This means the horizontal scroll bar may indicate less than the longest line in the file. As
+                // the user scrolls longer lines into view the scroll bar will adjust to account for discovery of longer lines.
+                RecomputeCanvasSizePartial(
+                    -AutoScrollPosition.Y / fontHeight,
+                    (-AutoScrollPosition.Y + ClientHeight + (fontHeight - 1)) / fontHeight,
+                    true/*includeClientWidthAndOverflow*/);
+
             }
         }
 
-        private void RecomputeCanvasSizeEstimated()
+        // Perform an exact canvas size recalc of just text length, without horizontal margin and min client size. Used for
+        // AutoSize=true inline edit scenario where control should grow/shrink to exactly the bounds of the text.
+        private void RecomputeCanvasSizeExactForAutoSize()
         {
-            if ((textStorageFactory == null) || DesignMode)
-            {
-                return;
-            }
-            ValidateHardened();
+            Debug.Assert(AutoSize); // only to be used for AutoSize=true mode
 
-            int averageCharWidth;
-            using (Graphics graphics = CreateGraphics())
-            {
-                using (ITextInfo info = textService.AnalyzeText(graphics, Font, "x"))
-                {
-                    Size extent = info.GetExtent(graphics);
-                    averageCharWidth = extent.Width;
-                }
-            }
+            currentWidth = 0; // allow shrink
+            RecomputeCanvasSizePartial(0, textStorage.Count, false/*includeClientWidthAndOverflow*/);
 
+            Size size = new Size(currentWidth, fontHeight * textStorage.Count);
+            if (this.Size != size)
+            {
+                this.Size = size; // constraint to MinimumSize taken care of by base class ScrollableControl
+            }
+        }
+
+        private readonly LineWidthCache lineWidthCache = new LineWidthCache();
+        private void ResetCanvasSizeCaches()
+        {
             currentWidth = 0;
-            // calculate region around visible area correctly and use approximation for the rest.
-            int startLine = -AutoScrollPosition.Y / fontHeight;
-            int endLine = (-AutoScrollPosition.Y + ClientHeight + (fontHeight - 1)) / fontHeight;
-            RecomputeCanvasSizePartial(startLine - 10, endLine + 10);
-            Stopwatch elapsed = new Stopwatch();
-            elapsed.Start();
-            for (int i = 0; i < textStorage.Count; i++)
-            {
-                ITextLine line = textStorage[i];
-#if false // not that important
-                using (IDecodedTextLine decodedLine = line.Decode_MustDispose())
-                {
-                    string s = decodedLine.Value;
-                    int tabs = 0;
-                    for (int j = 0; j < s.Length; j++)
-                    {
-                        if (s[j] == '\t')
-                        {
-                            tabs++;
-                        }
-                    }
-                    int effectiveLineLength = s.Length + tabs * (TabSize - 1);
-                    currentWidth = Math.Max(currentWidth, averageCharWidth * effectiveLineLength);
-                }
-#else
-                currentWidth = Math.Max(currentWidth, averageCharWidth * line.Length);
-#endif
-                if (elapsed.ElapsedMilliseconds > 1000)
-                {
-                    break;
-                }
-            }
-        }
-
-        // extend width of canvas if lines within range got longer than current width.
-        // (can't shrink width because it doesn't know of longer lines exist outside of range)
-        // always sets correct height of canvas.
-        private void RecomputeCanvasSizePartial(int startLine, int endLine)
-        {
-            if (AutoSize)
-            {
-                RecomputeCanvasSizeForAutoSize();
-            }
-            else
-            {
-                RecomputeCanvasSizePartialHelper(startLine, endLine, true/*includeClientWidthAndOverflow*/);
-            }
+            lineWidthCache.Clear();
         }
 
         // do not call this method directly, use RecomputeCanvasSizePartial() instead
-        private void RecomputeCanvasSizePartialHelper(int startLine, int endLine, bool includeClientWidthAndOverflow)
+        private void RecomputeCanvasSizePartial(int startLine, int endLine, bool includeClientWidthAndOverflow)
         {
             if (textStorageFactory == null)
             {
@@ -483,24 +441,70 @@ namespace TextEditor
                 // extra space for the IP on the edge and feels more comfortable to use.
                 int horizontalOverflow = includeClientWidthAndOverflow ? fontHeight : 1;
 
+                int currentWidth1 = 0;
+                int widestLine = -1;
                 for (int i = Math.Max(startLine, 0); i <= Math.Min(endLine, this.Count - 1); i++)
                 {
                     int width;
-                    bool tabsFound;
-                    using (IDecodedTextLine decodedLine = GetSpaceFromTabLineMustDispose(i, out tabsFound))
+                    if (!lineWidthCache.TryGet(i, out width))
                     {
-                        using (ITextInfo info = textService.AnalyzeText(graphics, Font, decodedLine.Value))
+                        bool tabsFound;
+                        using (IDecodedTextLine decodedLine = GetSpaceFromTabLineMustDispose(i, out tabsFound))
                         {
-                            width = info.GetExtent(graphics).Width + horizontalOverflow;
+                            using (ITextInfo info = textService.AnalyzeText(graphics, Font, fontHeight, decodedLine.Value))
+                            {
+                                width = info.GetExtent(graphics).Width;
+                            }
                         }
+                        lineWidthCache.Set(i, width);
                     }
-                    currentWidth = Math.Max(currentWidth, width);
+                    else
+                    {
+#if DEBUG
+                        bool tabsFound;
+                        int debugWidth;
+                        using (IDecodedTextLine decodedLine = GetSpaceFromTabLineMustDispose(i, out tabsFound))
+                        {
+                            using (ITextInfo info = textService.AnalyzeText(graphics, Font, fontHeight, decodedLine.Value))
+                            {
+                                debugWidth = info.GetExtent(graphics).Width;
+                            }
+                        }
+                        Debug.Assert(width == debugWidth);
+#endif
+                    }
+                    width += horizontalOverflow;
+                    if (currentWidth1 < width)
+                    {
+                        currentWidth1 = width;
+                        widestLine = i;
+                    }
                 }
+                int oldCurrentWidth = currentWidth;
+                currentWidth = currentWidth1;
                 if (includeClientWidthAndOverflow)
                 {
                     currentWidth = Math.Max(currentWidth, ClientWidth);
                 }
-                AutoScrollMinSize = new Size(currentWidth, textStorage.Count * fontHeight);
+                Size autoScrollMinSize = new Size(currentWidth, textStorage.Count * fontHeight);
+                if ((autoScrollMinSize.Width != AutoScrollMinSize.Width) || (autoScrollMinSize.Height != AutoScrollMinSize.Height))
+                {
+                    Debugger.Log(
+                        0,
+                        "TextViewControl",
+                        String.Format(
+                            "{0}: {7}[{1}..{2}|{8}]:{3} -> {4} -> ({5},{6})" + Environment.NewLine,
+                            DateTime.Now,
+                            startLine,
+                            endLine,
+                            currentWidth1,
+                            currentWidth,
+                            autoScrollMinSize.Width,
+                            autoScrollMinSize.Height,
+                            oldCurrentWidth == 0 ? "RESET " : String.Empty,
+                            widestLine));
+                    AutoScrollMinSize = autoScrollMinSize;
+                }
                 if ((offscreenStrip != null) && (ClientWidth > offscreenStrip.Width))
                 {
                     DisposeGraphicsObjects();
@@ -593,6 +597,7 @@ namespace TextEditor
                         using (ITextInfo info = textService.AnalyzeText(
                             graphics2,
                             Font,
+                            fontHeight,
                             line.Value))
                         {
                             rtlXAdjust = currentWidth - info.GetExtent(graphics2).Width;
@@ -606,6 +611,7 @@ namespace TextEditor
                         using (ITextInfo info = textService.AnalyzeText(
                             graphics2,
                             Font,
+                            fontHeight,
                             line.Value))
                         {
                             info.DrawText(
@@ -624,6 +630,7 @@ namespace TextEditor
                             using (ITextInfo info = textService.AnalyzeText(
                                 graphics2,
                                 Font,
+                                fontHeight,
                                 line.Value))
                             {
                                 info.DrawText(
@@ -665,6 +672,7 @@ namespace TextEditor
                             using (ITextInfo info = textService.AnalyzeText(
                                 graphics2,
                                 Font,
+                                fontHeight,
                                 line.Value))
                             {
                                 // draw full line of normal text
@@ -853,7 +861,7 @@ namespace TextEditor
             bool tabsFound;
             using (IDecodedTextLine decodedSpacedLine = GetSpaceFromTabLineMustDispose(lineIndex, out tabsFound))
             {
-                using (ITextInfo info = textService.AnalyzeText(graphics, Font, decodedSpacedLine.Value))
+                using (ITextInfo info = textService.AnalyzeText(graphics, Font, fontHeight, decodedSpacedLine.Value))
                 {
                     int columnIndex = GetColumnFromCharIndex(lineIndex, charIndex);
                     int indent;
@@ -894,7 +902,7 @@ namespace TextEditor
             bool tabsFound;
             using (IDecodedTextLine decodedSpacedLine = GetSpaceFromTabLineMustDispose(lineIndex, out tabsFound))
             {
-                using (ITextInfo info = textService.AnalyzeText(graphics, Font, decodedSpacedLine.Value))
+                using (ITextInfo info = textService.AnalyzeText(graphics, Font, fontHeight, decodedSpacedLine.Value))
                 {
                     if (RightToLeft == RightToLeft.Yes)
                     {
@@ -1021,7 +1029,7 @@ namespace TextEditor
             this.textStorage = factory.Take(storage);
             stickyX = 0;
             SetInsertionPoint(0, 0);
-            RecomputeCanvasSize();
+            ResetCanvasSize();
         }
 
 
@@ -1069,13 +1077,32 @@ namespace TextEditor
                         newService = new TextServiceUniscribe();
                         break;
                     case TextService.DirectWrite:
-                        newService = new TextServiceDirectWrite();
+                        if (!String.Equals(System.Diagnostics.Process.GetCurrentProcess().ProcessName, "devenv"))
+                        {
+                            // attempt to load unprotected
+                            newService = new TextServiceDirectWrite();
+                        }
+                        else
+                        {
+                            // In design mode, VS dll isolation is causing grief with indirect dependencies.
+                            // Try to create (try here - constructor can't because method fails before invocation due to
+                            // missing dependency) and fall back to Uniscribe if not available.
+                            try
+                            {
+                                newService = new TextServiceDirectWrite();
+                            }
+                            catch (Exception exception)
+                            {
+                                MessageBox.Show(String.Format("{0}: Failed to create DirectWrite wrapper - falling back to Uniscribe ({1})", this.GetType().Name, exception.Message));
+                                newService = new TextServiceUniscribe();
+                            }
+                        }
                         break;
                 }
                 textService.Dispose();
                 textService = newService;
                 textService.Reset(Font, ClientWidth);
-                RecomputeCanvasSize();
+                ResetCanvasSize();
             }
         }
 
@@ -1120,7 +1147,7 @@ namespace TextEditor
                 spacesPerTab = value;
                 if (changed)
                 {
-                    RecomputeCanvasSize();
+                    ResetCanvasSize();
                     SetStickyX();
                     Redraw();
                 }
@@ -1553,26 +1580,26 @@ namespace TextEditor
 
                 /* vertical adjustment */
                 if (((startLine * fontHeight >= -AutoScrollPosition.Y + check)
-                        && (startLine < -AutoScrollPosition.Y + (textStorage.Count * fontHeight - check - 1)))
+                        && (startLine < -AutoScrollPosition.Y + (textStorage.Count * fontHeight - check)))
                     || ((startLine * fontHeight < check)
                         && (startLine * fontHeight >= -AutoScrollPosition.Y))
-                    || (ClientHeight < FontHeight))
+                    || (ClientHeight < fontHeight))
                 {
                     /* beginning of selection is in the box, so try to center the end */
                     if ((endLine * fontHeight < -AutoScrollPosition.Y + check)
-                        || (ClientHeight < FontHeight))
+                        || (ClientHeight < fontHeight))
                     {
                         /* selection is too far up */
                         AutoScrollPosition = new Point(
                             -AutoScrollPosition.X,
                             endLine * fontHeight - check);
                     }
-                    else if (endLine * fontHeight >= -AutoScrollPosition.Y + (ClientHeight - fontHeight - check - 1))
+                    else if (endLine * fontHeight >= -AutoScrollPosition.Y + (ClientHeight - fontHeight - check))
                     {
                         /* selection is too far down */
                         AutoScrollPosition = new Point(
                             -AutoScrollPosition.X,
-                            endLine * fontHeight - (ClientHeight - fontHeight - check - 1) + 1);
+                            endLine * fontHeight - (ClientHeight - fontHeight - check));
                     }
                 }
                 else
@@ -1585,18 +1612,16 @@ namespace TextEditor
                             -AutoScrollPosition.X,
                             startLine * fontHeight - check);
                     }
-                    else if (startLine * fontHeight >= -AutoScrollPosition.Y + (ClientHeight - check - 1))
+                    else if (startLine * fontHeight >= -AutoScrollPosition.Y + (ClientHeight - check))
                     {
                         /* selection is too far down */
                         AutoScrollPosition = new Point(
                             -AutoScrollPosition.X,
-                            startLine * fontHeight - (ClientHeight - check - 1) + 1);
+                            startLine * fontHeight - (ClientHeight - check));
                     }
                 }
 
-                RecomputeCanvasSizePartial(
-                    -AutoScrollPosition.Y / fontHeight,
-                    (-AutoScrollPosition.Y + ClientHeight + fontHeight - 1) / fontHeight);
+                RecomputeCanvasSizeIncremental();
 
                 /* figure out how much space on left and right edges to leave */
                 check = Math.Min(32, Math.Max(ClientWidth / 2 - 32, 0));
@@ -1909,8 +1934,8 @@ namespace TextEditor
                     using (IDecodedTextLine decodedLine = textStorage[start.Line].Decode_MustDispose())
                     {
                         using (ITextInfo info = !simpleNavigation
-                            ? textService.AnalyzeText(graphics, Font, decodedLine.Value)
-                            : new TextServiceSimple().AnalyzeText(graphics, Font, decodedLine.Value))
+                            ? textService.AnalyzeText(graphics, Font, fontHeight, decodedLine.Value)
+                            : new TextServiceSimple().AnalyzeText(graphics, Font, fontHeight, decodedLine.Value))
                         {
                             int previous;
                             info.PreviousWordBoundary(start.Column, out previous);
@@ -1923,8 +1948,8 @@ namespace TextEditor
                     using (IDecodedTextLine decodedLine = textStorage[end.Line].Decode_MustDispose())
                     {
                         using (ITextInfo info = !simpleNavigation
-                            ? textService.AnalyzeText(graphics, Font, decodedLine.Value)
-                            : new TextServiceSimple().AnalyzeText(graphics, Font, decodedLine.Value))
+                            ? textService.AnalyzeText(graphics, Font, fontHeight, decodedLine.Value)
+                            : new TextServiceSimple().AnalyzeText(graphics, Font, fontHeight, decodedLine.Value))
                         {
                             int next;
                             info.NextWordBoundary(end.Column, out next);
@@ -2090,8 +2115,8 @@ namespace TextEditor
                                         else if ((e.KeyData & Keys.Control) != 0)
                                         {
                                             using (ITextInfo info = !simpleNavigation
-                                                ? textService.AnalyzeText(graphics, Font, decodedLine.Value)
-                                                : new TextServiceSimple().AnalyzeText(graphics, Font, decodedLine.Value))
+                                                ? textService.AnalyzeText(graphics, Font, fontHeight, decodedLine.Value)
+                                                : new TextServiceSimple().AnalyzeText(graphics, Font, fontHeight, decodedLine.Value))
                                             {
                                                 int previous;
                                                 info.PreviousWordBoundary(index, out previous);
@@ -2101,8 +2126,8 @@ namespace TextEditor
                                         else
                                         {
                                             using (ITextInfo info = !simpleNavigation
-                                                ? textService.AnalyzeText(graphics, Font, decodedLine.Value)
-                                                : new TextServiceSimple().AnalyzeText(graphics, Font, decodedLine.Value))
+                                                ? textService.AnalyzeText(graphics, Font, fontHeight, decodedLine.Value)
+                                                : new TextServiceSimple().AnalyzeText(graphics, Font, fontHeight, decodedLine.Value))
                                             {
                                                 int previous;
                                                 info.PreviousCharBoundary(index, out previous);
@@ -2160,8 +2185,8 @@ namespace TextEditor
                                         else if ((e.KeyData & Keys.Control) != 0)
                                         {
                                             using (ITextInfo info = !simpleNavigation
-                                                ? textService.AnalyzeText(graphics, Font, decodedLine.Value)
-                                                : new TextServiceSimple().AnalyzeText(graphics, Font, decodedLine.Value))
+                                                ? textService.AnalyzeText(graphics, Font, fontHeight, decodedLine.Value)
+                                                : new TextServiceSimple().AnalyzeText(graphics, Font, fontHeight, decodedLine.Value))
                                             {
                                                 int next;
                                                 info.NextWordBoundary(index, out next);
@@ -2171,8 +2196,8 @@ namespace TextEditor
                                         else
                                         {
                                             using (ITextInfo info = !simpleNavigation
-                                                ? textService.AnalyzeText(graphics, Font, decodedLine.Value)
-                                                : new TextServiceSimple().AnalyzeText(graphics, Font, decodedLine.Value))
+                                                ? textService.AnalyzeText(graphics, Font, fontHeight, decodedLine.Value)
+                                                : new TextServiceSimple().AnalyzeText(graphics, Font, fontHeight, decodedLine.Value))
                                             {
                                                 int next;
                                                 info.NextCharBoundary(index, out next);
@@ -2511,25 +2536,22 @@ namespace TextEditor
                     replacedEndCharPlusOne);
             }
 
+            lineWidthCache.Delete(startLine, endLine - startLine);
+            lineWidthCache.Invalidate(startLine);
             textStorage.DeleteSection(
                 startLine,
                 startChar,
                 endLine,
                 endCharPlusOne);
 
+            lineWidthCache.Insert(startLine + 1, replacement.Count - 1);
+            lineWidthCache.Invalidate(startLine);
             textStorage.InsertSection(
                 startLine,
                 startChar,
                 replacement);
 
-            if (replacedEndLine - startLine <= 3 * ClientHeight / fontHeight)
-            {
-                RecomputeCanvasSizePartial(startLine, replacedEndLine);
-            }
-            else
-            {
-                RecomputeCanvasSizeEstimated();
-            }
+            RecomputeCanvasSizeIncremental();
 
             if (!select.HasValue)
             {

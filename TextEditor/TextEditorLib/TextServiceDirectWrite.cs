@@ -24,11 +24,7 @@ using System;
 using System.Collections.Generic;
 using System.Diagnostics;
 using System.Drawing;
-using System.Drawing.Imaging;
-using System.Globalization;
-using System.Reflection;
 using System.Runtime.InteropServices;
-using System.Text;
 using System.Windows.Forms;
 
 namespace TextEditor
@@ -37,6 +33,29 @@ namespace TextEditor
     {
         private readonly TextServiceDirectWriteInterop interop;
         private readonly ITextService uniscribeService;
+
+        private static TextServiceDirectWriteGlobalsHandle interopGlobals;
+
+        public static TextServiceDirectWriteGlobalsHandle InteropGlobals
+        {
+            get
+            {
+                if (interopGlobals == null)
+                {
+                    interopGlobals = new TextServiceDirectWriteGlobalsHandle();
+                }
+                return interopGlobals;
+            }
+        }
+
+        public static void DisposeInteropGlobals()
+        {
+            if (interopGlobals != null)
+            {
+                interopGlobals._Dispose();
+                interopGlobals = null;
+            }
+        }
 
         public TextServiceDirectWrite()
         {
@@ -59,9 +78,21 @@ namespace TextEditor
 
         ~TextServiceDirectWrite()
         {
-            Debug.Assert(false, "TextServiceDirectWrite: Finalizer invoked - have you forgotten to .Dispose()?");
+            // HACK to ignore at design time if the TextEditorDirectWrite dll fails to load - since Dispose() will fault on
+            // missing dll and kill the entire process.
+            if (String.Equals(System.Diagnostics.Process.GetCurrentProcess().ProcessName, "devenv"))
+            {
+                return;
+            }
+
+#if DEBUG
+            Debug.Assert(false, this.GetType().Name + " finalizer invoked - have you forgotten to .Dispose()? " + allocatedFrom.ToString());
+#endif
             Dispose();
         }
+#if DEBUG
+        private readonly StackTrace allocatedFrom = new StackTrace(true);
+#endif
 
         public void Dispose()
         {
@@ -87,7 +118,7 @@ namespace TextEditor
             Font font,
             int visibleWidth)
         {
-            int hr = interop.Reset(font, visibleWidth);
+            int hr = interop.Reset(TextServiceDirectWrite.InteropGlobals, font, visibleWidth);
             if (hr < 0)
             {
                 Marshal.ThrowExceptionForHR(hr);
@@ -101,6 +132,7 @@ namespace TextEditor
         public ITextInfo AnalyzeText(
             Graphics graphics,
             Font font,
+            int fontHeight, // TODO: pass this through
             string line)
         {
             if (line.IndexOfAny(new char[] { '\r', '\n' }) >= 0)
@@ -126,8 +158,8 @@ namespace TextEditor
             public TextLayout(
                 TextServiceDirectWrite service,
                 string line,
-                Graphics graphics_,
-                Font font_)
+                Graphics _graphics,
+                Font _font)
             {
                 try
                 {
@@ -143,7 +175,7 @@ namespace TextEditor
                     }
 
 #if true
-                    uniscribeLine = service.uniscribeService.AnalyzeText(graphics_, font_, line);
+                    uniscribeLine = service.uniscribeService.AnalyzeText(_graphics, _font, _font.Height, line);
 #else // TODO: support Windows.Data.Text for universal script segmentation support
 #endif
                 }
@@ -156,9 +188,14 @@ namespace TextEditor
 
             ~TextLayout()
             {
-                Debug.Assert(false, "TextServiceDirectWrite.TextItems: Finalizer invoked - have you forgotten to .Dispose()?");
+#if DEBUG
+                Debug.Assert(false, this.GetType().Name + " finalizer invoked - have you forgotten to .Dispose()? " + allocatedFrom.ToString());
+#endif
                 Dispose();
             }
+#if DEBUG
+            private readonly StackTrace allocatedFrom = new StackTrace(true);
+#endif
 
             public void Dispose()
             {
@@ -359,27 +396,12 @@ namespace TextEditor
     public static class DirectWriteTextRenderer
     {
         private static List<KeyValuePair<Font, TextServiceDirectWriteInterop>> interops;
-#if false
-        private static TextServiceDirectWriteInterop interop;
-        private static Font lastFont;
-#endif
         private static int lastWidth;
         private const int MaxCachedInterops = 3;
+        private static TextServiceLineDirectWriteInterop lineInterop;
 
         private static TextServiceDirectWriteInterop EnsureInterop(Font font)
         {
-#if false
-            if (interop == null)
-            {
-                interop = new TextServiceDirectWriteInterop();
-            }
-            if ((lastFont != font) || (lastWidth != Screen.PrimaryScreen.Bounds.Width))
-            {
-                lastFont = font;
-                lastWidth = Screen.PrimaryScreen.Bounds.Width;
-                interop.Reset(lastFont, lastWidth);
-            }
-#endif
             if (interops == null)
             {
                 interops = new List<KeyValuePair<Font, TextServiceDirectWriteInterop>>(MaxCachedInterops);
@@ -407,7 +429,7 @@ namespace TextEditor
                 }
                 index = interops.Count;
                 TextServiceDirectWriteInterop interop = new TextServiceDirectWriteInterop();
-                interop.Reset(font, lastWidth);
+                interop.Reset(TextServiceDirectWrite.InteropGlobals, font, lastWidth);
                 interops.Add(new KeyValuePair<Font, TextServiceDirectWriteInterop>(font, interop));
 #if DEBUG
                 Debugger.Log(
@@ -427,11 +449,14 @@ namespace TextEditor
 
         private static void ClearCache()
         {
-            for (int i = 0; i < interops.Count; i++)
+            if (interops != null)
             {
-                interops[i].Value._Dispose();
+                for (int i = 0; i < interops.Count; i++)
+                {
+                    interops[i].Value._Dispose();
+                }
+                interops.Clear();
             }
-            interops.Clear();
 #if DEBUG
             Debugger.Log(
                 1,
@@ -441,6 +466,13 @@ namespace TextEditor
                     ": Flushed DirectWrite interop list",
                     Environment.NewLine));
 #endif
+        }
+
+        public static void FinalizeBeforeShutdown()
+        {
+            ClearCache();
+            lineInterop._Dispose();
+            TextServiceDirectWrite.DisposeInteropGlobals();
         }
 
         public static void DrawText(Graphics graphics, string text, Font font, Point pt, Color foreColor)
@@ -482,9 +514,16 @@ namespace TextEditor
         {
             TextServiceDirectWriteInterop interop = EnsureInterop(font);
 
-            using (TextServiceLineDirectWriteInterop lineInterop = new TextServiceLineDirectWriteInterop())
+            TextServiceLineDirectWriteInterop localLineInterop = lineInterop;
+            lineInterop = null;
+            try
             {
-                int hr = lineInterop.Init(interop, text);
+                if (localLineInterop == null)
+                {
+                    localLineInterop = new TextServiceLineDirectWriteInterop();
+                }
+
+                int hr = localLineInterop.Init(interop, text);
                 if (hr < 0)
                 {
                     Marshal.ThrowExceptionForHR(hr);
@@ -492,7 +531,7 @@ namespace TextEditor
                 if ((flags & TextFormatFlags.HorizontalCenter) != 0)
                 {
                     Size size;
-                    hr = lineInterop.GetExtent(graphics, out size);
+                    hr = localLineInterop.GetExtent(graphics, out size);
                     if (hr < 0)
                     {
                         Marshal.ThrowExceptionForHR(hr);
@@ -500,7 +539,20 @@ namespace TextEditor
                     bounds.X += (bounds.Width - size.Width) / 2;
                     bounds.Width += size.Width / 2;
                 }
-                lineInterop.DrawTextWithRenderTarget(graphics, bounds, foreColor, backColor);
+                localLineInterop.DrawTextWithRenderTarget(graphics, bounds, foreColor, backColor);
+            }
+            finally
+            {
+                if (localLineInterop != null) // always clear contained references
+                {
+                    localLineInterop.Dispose();
+                }
+
+                if (lineInterop != null)
+                {
+                    lineInterop.Dispose();
+                }
+                lineInterop = localLineInterop;
             }
         }
 
@@ -510,20 +562,40 @@ namespace TextEditor
         {
             TextServiceDirectWriteInterop interop = EnsureInterop(font);
 
-            using (TextServiceLineDirectWriteInterop lineInterop = new TextServiceLineDirectWriteInterop())
+            TextServiceLineDirectWriteInterop localLineInterop = lineInterop;
+            lineInterop = null;
+            try
             {
-                int hr = lineInterop.Init(interop, text);
+                if (localLineInterop == null)
+                {
+                    localLineInterop = new TextServiceLineDirectWriteInterop();
+                }
+
+                int hr = localLineInterop.Init(interop, text);
                 if (hr < 0)
                 {
                     Marshal.ThrowExceptionForHR(hr);
                 }
                 Size extent;
-                hr = lineInterop.GetExtent(graphics, out extent);
+                hr = localLineInterop.GetExtent(graphics, out extent);
                 if (hr < 0)
                 {
                     Marshal.ThrowExceptionForHR(hr);
                 }
                 return extent;
+            }
+            finally
+            {
+                if (localLineInterop != null) // always clear contained references
+                {
+                    localLineInterop.Dispose();
+                }
+
+                if (lineInterop != null)
+                {
+                    lineInterop.Dispose();
+                }
+                lineInterop = localLineInterop;
             }
         }
 
@@ -547,7 +619,7 @@ namespace TextEditor
             GCHandle hData = GCHandle.Alloc(data, GCHandleType.Pinned);
             try
             {
-                TextServiceFontEnumeratorHelper.AddFont(hData.AddrOfPinnedObject().ToInt64(), data.Length);
+                TextServiceDirectWrite.InteropGlobals.AddFont(hData.AddrOfPinnedObject().ToInt64(), data.Length);
             }
             finally
             {

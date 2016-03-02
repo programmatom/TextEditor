@@ -96,6 +96,7 @@ namespace TextEditor
         ITextInfo AnalyzeText(
             Graphics graphics,
             Font font,
+            int fontHeight,
             string line);
     }
 }
