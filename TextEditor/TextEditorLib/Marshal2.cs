@@ -192,7 +192,14 @@ namespace TextEditor
                         Debug.Assert(false);
                         throw new ArgumentException();
                     }
-                    SecureZero(pinStr.AddrOfPinnedObject(), str.Length * elementSize);
+                    IntPtr pinStrAddr0 = pinStr.AddrOfPinnedObject();
+                    // try to detect when assumption about internal structure of String object is invalid
+                    if ((short)str[0] != Marshal.ReadInt16(pinStrAddr0, 0))
+                    {
+                        Debug.Assert(false);
+                        throw new InvalidOperationException();
+                    }
+                    SecureZero(pinStrAddr0, str.Length * elementSize);
                 }
             }
         }

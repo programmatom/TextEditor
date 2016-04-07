@@ -238,6 +238,10 @@ namespace TextEditor
 
         protected override void OnFontChanged(EventArgs e)
         {
+            // clear cache because, during dpi-change, values will be incorrect and then base.OnFontChanged calls OnSizeChanged
+            // which tries to use them, leading to asserts.
+            ResetCanvasSizeCaches();
+
             base.OnFontChanged(e);
 
             DisposeGraphicsObjects(); // reset height of offscreen strip
