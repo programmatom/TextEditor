@@ -20,17 +20,12 @@
  * 
 */
 using System;
-using System.Collections.Generic;
-using System.ComponentModel;
 using System.Diagnostics;
-using System.IO;
-using System.Runtime.CompilerServices;
 using System.Runtime.InteropServices;
-using System.Security.Cryptography;
-using System.Text;
 
 namespace TextEditor
 {
+#if WINDOWS
     public class ProtectedStorageFactory : TextStorage.TextStorageFactory
     {
         protected class ProtectedStorageDecodedLine : IDecodedTextLine
@@ -456,4 +451,46 @@ namespace TextEditor
             Int32 cbData,
             CryptProtectMemoryFlags dwFlags);
     }
+#else
+    public class ProtectedStorageFactory : TextStorage.TextStorageFactory
+    {
+        public override bool Hardened
+        {
+            get
+            {
+                throw new NotImplementedException();
+            }
+        }
+
+        public override ITextLine Encode(string line)
+        {
+            throw new NotImplementedException();
+        }
+
+        public override ITextLine Encode(char[] chars, int offset, int count)
+        {
+            throw new NotImplementedException();
+        }
+
+        public override ITextLine Ensure(ITextLine line)
+        {
+            throw new NotImplementedException();
+        }
+
+        public override IDecodedTextLine NewDecoded_MustDispose(char[] chars, int offset, int count)
+        {
+            throw new NotImplementedException();
+        }
+
+        public override TextStorage NewStorage()
+        {
+            throw new NotImplementedException();
+        }
+
+        public override ITextStorage Take(ITextStorage source)
+        {
+            throw new NotImplementedException();
+        }
+    }
+#endif
 }

@@ -21,9 +21,7 @@
 */
 using System;
 using System.Collections.Generic;
-using System.ComponentModel;
 using System.Diagnostics;
-using System.IO;
 using System.Text;
 
 namespace TextEditor
@@ -41,7 +39,7 @@ namespace TextEditor
 #if DEBUG
             if (EnableLogging)
             {
-                Debugger.Log(0, "TextViewControl.LineWidthCache", String.Format("LineWidthCache.Clear()" + Environment.NewLine));
+                Debugger.Log(0, "TextViewControl.LineWidthCache", "LineWidthCache.Clear()" + Environment.NewLine);
             }
 #endif
             start = 0;

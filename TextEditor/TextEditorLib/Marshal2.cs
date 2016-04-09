@@ -21,10 +21,8 @@
 */
 
 using System;
-using System.Collections.Generic;
 using System.Diagnostics;
 using System.Runtime.InteropServices;
-using System.Text;
 
 namespace TextEditor
 {
@@ -77,6 +75,7 @@ namespace TextEditor
         }
 #endif
 
+#if WINDOWS
         public static void Copy(string src, int srcOffset, IntPtr dest, int count)
         {
             // Could be made faster using some unsafe code and reinterpret-casting
@@ -91,6 +90,7 @@ namespace TextEditor
                 }
             }
         }
+#endif
 
 #if false
         public static void CopyArrayOfStruct<T>(T[] src, int srcOffset, IntPtr dest, int destByteCapacity, int count) where T : struct
@@ -170,18 +170,23 @@ namespace TextEditor
 
         private static void SecureZero(IntPtr baseAddr, int byteCount)
         {
+#if WINDOWS
             byte[] zero = new byte[byteCount];
             Marshal.Copy(zero, 0, baseAddr, byteCount);
+#endif
         }
 
+#if WINDOWS
         private static int UnsafeSizeOfPinnedArrayElement(Array array)
         {
             return (int)(Marshal.UnsafeAddrOfPinnedArrayElement(array, 1).ToInt64()
                 - Marshal.UnsafeAddrOfPinnedArrayElement(array, 0).ToInt64());
         }
+#endif
 
         public static void SecureZero(string str, IntPtr baseAddr)
         {
+#if WINDOWS
             if (str.Length != 0)
             {
                 using (Pin<string> pinStr = new Pin<string>(str))
@@ -202,10 +207,12 @@ namespace TextEditor
                     SecureZero(pinStrAddr0, str.Length * elementSize);
                 }
             }
+#endif
         }
 
         public static void SecureZero(byte[] array, IntPtr baseAddr)
         {
+#if WINDOWS
             using (Pin<byte[]> pinArray = new Pin<byte[]>(array))
             {
                 Debug.Assert(1 == UnsafeSizeOfPinnedArrayElement(array));
@@ -216,10 +223,12 @@ namespace TextEditor
                 }
                 SecureZero(pinArray.AddrOfPinnedObject(), array.Length);
             }
+#endif
         }
 
         public static void SecureZero(char[] array, IntPtr baseAddr)
         {
+#if WINDOWS
             using (Pin<char[]> pinArray = new Pin<char[]>(array))
             {
                 const int elementSize = 2;
@@ -231,10 +240,12 @@ namespace TextEditor
                 }
                 SecureZero(pinArray.AddrOfPinnedObject(), array.Length * elementSize);
             }
+#endif
         }
 
         public static void SecureZero<T>(T[] array, IntPtr baseAddr) where T : struct
         {
+#if WINDOWS
             using (Pin<T[]> pinArray = new Pin<T[]>(array))
             {
                 int elementSize = UnsafeSizeOfPinnedArrayElement(array);
@@ -245,6 +256,7 @@ namespace TextEditor
                 }
                 SecureZero(pinArray.AddrOfPinnedObject(), array.Length * elementSize);
             }
+#endif
         }
     }
 }

@@ -20,15 +20,11 @@
  * 
 */
 using System;
-using System.Collections;
-using System.Collections.Generic;
 using System.ComponentModel;
 using System.Diagnostics;
 using System.Drawing;
 using System.Drawing.Drawing2D;
-using System.IO;
 using System.Runtime.InteropServices;
-using System.Text;
 using System.Windows.Forms;
 
 namespace TextEditor
@@ -76,7 +72,11 @@ namespace TextEditor
 
         private int fontHeight;
 
+#if WINDOWS
         private ITextService textService = new TextServiceUniscribe(); // if changing, update TextService default value attribute as well
+#else
+        private ITextService textService = new TextServiceSimple(); // if changing, update TextService default value attribute as well
+#endif
 
         private bool requireHardened;
 
@@ -107,8 +107,12 @@ namespace TextEditor
             OnFontChanged(EventArgs.Empty); // ensure recalculations
         }
 
+#if WINDOWS
         [DllImport("user32.dll")]
         private extern static uint GetCaretBlinkTime(); // msec
+#else
+        private static uint GetCaretBlinkTime() { return 500; } // msec
+#endif
 
         public TextViewControl(ITextStorageFactory textStorageFactory)
             : this()
@@ -1054,7 +1058,11 @@ namespace TextEditor
         [Category("Behavior"), DefaultValue(false)]
         public bool SimpleNavigation { get { return simpleNavigation; } set { simpleNavigation = value; } }
 
+#if WINDOWS
         [Category("Appearance"), DefaultValue(TextService.Uniscribe)]
+#else
+        [Category("Appearance"), DefaultValue(TextService.Simple)]
+#endif
         public TextService TextService
         {
             get
@@ -1077,6 +1085,7 @@ namespace TextEditor
                     case TextService.Simple:
                         newService = new TextServiceSimple();
                         break;
+#if WINDOWS
                     case TextService.Uniscribe:
                         newService = new TextServiceUniscribe();
                         break;
@@ -1102,6 +1111,7 @@ namespace TextEditor
                             }
                         }
                         break;
+#endif
                 }
                 textService.Dispose();
                 textService = newService;

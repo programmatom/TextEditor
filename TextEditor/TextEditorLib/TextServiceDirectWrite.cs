@@ -27,6 +27,7 @@ using System.Drawing;
 using System.Runtime.InteropServices;
 using System.Windows.Forms;
 
+#if WINDOWS
 namespace TextEditor
 {
     public class TextServiceDirectWrite : ITextService, IDisposable
@@ -628,3 +629,4 @@ namespace TextEditor
         }
     }
 }
+#endif

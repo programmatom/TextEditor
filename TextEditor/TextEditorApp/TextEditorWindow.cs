@@ -21,7 +21,6 @@
 */
 using System;
 using System.Collections.Generic;
-using System.ComponentModel;
 using System.Diagnostics;
 using System.Drawing;
 using System.IO;
@@ -140,9 +139,17 @@ namespace TextEditor
             return factory;
         }
 
+#if WINDOWS
         [DllImport("advapi32.dll")]
         [return: MarshalAs(UnmanagedType.Bool)]
         private extern static bool IsTextUnicode(IntPtr buffer, int byteCount, ref IsTextUnicodeFlags flags);
+#else
+        private static bool IsTextUnicode(IntPtr buffer, int byteCount, ref IsTextUnicodeFlags flags)
+        {
+            flags = (IsTextUnicodeFlags)0;
+            return false;
+        }
+#endif
 
         [Flags]
         private enum IsTextUnicodeFlags : int

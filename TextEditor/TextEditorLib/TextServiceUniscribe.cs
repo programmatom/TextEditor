@@ -30,6 +30,7 @@ using System.IO;
 using System.Runtime.InteropServices;
 using System.Text;
 
+#if WINDOWS
 namespace TextEditor
 {
     // https://msdn.microsoft.com/en-us/library/windows/desktop/dd374091%28v=vs.85%29.aspx
@@ -2044,3 +2045,4 @@ namespace TextEditor
             [In, Out] ref IntPtr/*SCRIPT_STRING_ANALYSIS*/  pssa); //InOut Address of pointer to analysis
     }
 }
+#endif

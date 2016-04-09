@@ -20,13 +20,10 @@
  * 
 */
 using System;
-using System.Collections.Generic;
 using System.ComponentModel;
 using System.Diagnostics;
-using System.Drawing;
 using System.Globalization;
 using System.Runtime.InteropServices;
-using System.Text;
 using System.Windows.Forms;
 
 namespace TextEditor
@@ -646,6 +643,7 @@ namespace TextEditor
             return;
         }
 
+#if WINDOWS
         // from http://stackoverflow.com/questions/8924556/force-window-to-blink-when-a-particular-event-occurs-in-c-sharp-wpf
 
         [DllImport("user32.dll")]
@@ -707,9 +705,11 @@ namespace TextEditor
         /// Flash continuously until the window comes to the foreground.
         /// </summary>
         private const uint FLASHW_TIMERNOFG = 12;
+#endif
 
         public static void DefaultErrorBeep(IntPtr hwnd)
         {
+#if WINDOWS
             FLASHWINFO fi = new FLASHWINFO();
             fi.cbSize = Convert.ToUInt32(Marshal.SizeOf(fi));
             fi.hwnd = hwnd;
@@ -717,6 +717,7 @@ namespace TextEditor
             fi.uCount = 3;
             fi.dwTimeout = 50;
             FlashWindowEx(ref fi);
+#endif
         }
 
         public void ErrorBeep()

@@ -21,16 +21,14 @@
 */
 
 using System;
-using System.Collections.Generic;
 using System.Diagnostics;
 using System.Drawing;
-using System.Drawing.Drawing2D;
 using System.Drawing.Imaging;
 using System.Runtime.InteropServices;
-using System.Text;
 
 namespace TextEditor
 {
+#if WINDOWS
     // Wrappers around GDI routines for use with 'using' pattern
 
     public static class GDI
@@ -713,4 +711,5 @@ namespace TextEditor
         public int Width { get { return hBitmap.Width; } }
         public int Height { get { return hBitmap.Height; } }
     }
+#endif
 }

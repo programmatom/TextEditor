@@ -23,6 +23,7 @@ using System;
 using System.Collections.Generic;
 using System.ComponentModel;
 using System.Diagnostics;
+using System.Runtime.InteropServices;
 using System.Text;
 using System.Windows.Forms;
 
@@ -479,8 +480,10 @@ namespace TextEditor
             }
             if ((pasteToolStripMenuItem != null) && Enable)
             {
+#if WINDOWS // TODO: Remove when fixed: Mono on Windows has bug which crashes in Clipboard.ContainsText()
                 pasteToolStripMenuItem.Enabled = !textEditControl.ReadOnly
                     && (Clipboard.ContainsText() || (textEditControl.Hardened && (secureClipboard != null)));
+#endif
             }
             if ((clearToolStripMenuItem != null) && Enable)
             {

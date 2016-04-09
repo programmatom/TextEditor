@@ -21,11 +21,9 @@
 */
 
 using System;
-using System.Collections.Generic;
 using System.Diagnostics;
 using System.Drawing;
 using System.Runtime.InteropServices;
-using System.Text;
 using System.Windows.Forms;
 
 namespace TextEditor
@@ -48,6 +46,7 @@ namespace TextEditor
                 this.fontHeight = fontHeight;
                 this.size = size;
 
+#if WINDOWS
                 pinLine = new Pin<string>(new String((char)0, line.Length));
                 bool success = false;
                 try
@@ -63,6 +62,9 @@ namespace TextEditor
                         pinLine.Dispose();
                     }
                 }
+#else
+                pinLine = new Pin<string>(line);
+#endif
             }
 
             public void Dispose()
@@ -71,6 +73,7 @@ namespace TextEditor
                 pinLine.Dispose();
             }
 
+#if WINDOWS
             private class DeviceContext : IDeviceContext
             {
                 private readonly Graphics graphics;
@@ -103,6 +106,7 @@ namespace TextEditor
                     // not owned
                 }
             }
+#endif
 
             public void DrawText(
                 Graphics graphics,
@@ -111,16 +115,28 @@ namespace TextEditor
                 Color foreColor,
                 Color backColor)
             {
+#if WINDOWS
                 using (DeviceContext dc = new DeviceContext(graphics))
+#else
+#endif
                 {
                     TextRenderer.DrawText(
+#if WINDOWS
                         dc,
+#else
+                        graphics, // Mono's TextRenderer reverses IDeviceContext back to Graphics, but GDI is off the table for Mono so we don't need it.
+#endif
                         pinLine.Ref,
                         font,
                         position,
                         foreColor,
                         backColor,
-                        textFormatFlags);
+#if WINDOWS
+                        textFormatFlags
+#else
+                        textFormatFlags | TextFormatFlags.PreserveGraphicsClipping
+#endif
+                        );
                 }
             }
 
