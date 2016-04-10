@@ -112,6 +112,7 @@ namespace TextEditor
             this.protectedStorageFactory = new TextEditor.ProtectedStorageFactory();
             this.utf8SplayGapBufferFactory = new TextEditor.Utf8SplayGapStorageFactory();
             this.dpiChangeHelper = new TextEditor.DpiChangeHelper(this.components);
+            this.stochasticTestToolStripMenuItem = new System.Windows.Forms.ToolStripMenuItem();
             this.menuStrip.SuspendLayout();
             this.tableLayoutPanel1.SuspendLayout();
             this.toolStrip.SuspendLayout();
@@ -575,6 +576,7 @@ namespace TextEditor
             // 
             this.toolsToolStripMenuItem.DropDownItems.AddRange(new System.Windows.Forms.ToolStripItem[] {
             this.testInlineModeToolStripMenuItem,
+            this.stochasticTestToolStripMenuItem,
             this.toolStripMenuItem15,
             this.previousUTF16SurrogatePairToolStripMenuItem,
             this.nextUTF16SurrogatePairToolStripMenuItem,
@@ -756,6 +758,13 @@ namespace TextEditor
             // 
             this.dpiChangeHelper.Form = this;
             // 
+            // stochasticTestToolStripMenuItem
+            // 
+            this.stochasticTestToolStripMenuItem.Name = "stochasticTestToolStripMenuItem";
+            this.stochasticTestToolStripMenuItem.Size = new System.Drawing.Size(256, 22);
+            this.stochasticTestToolStripMenuItem.Text = "Stochastic Test";
+            this.stochasticTestToolStripMenuItem.Click += new System.EventHandler(this.stochasticTestToolStripMenuItem_Click);
+            // 
             // TextEditorWindow
             // 
             this.AllowDrop = true;
@@ -860,5 +869,6 @@ namespace TextEditor
         private System.Windows.Forms.ToolStripMenuItem testInlineModeToolStripMenuItem;
         private System.Windows.Forms.ToolStripSeparator toolStripMenuItem15;
         private DpiChangeHelper dpiChangeHelper;
+        private System.Windows.Forms.ToolStripMenuItem stochasticTestToolStripMenuItem;
     }
 }

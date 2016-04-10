@@ -1171,5 +1171,13 @@ namespace TextEditor
         {
             new TestInlineMode().Show();
         }
+
+        private void stochasticTestToolStripMenuItem_Click(object sender, EventArgs e)
+        {
+            using (StochasticTest dialog = new StochasticTest(textEditControl))
+            {
+                dialog.ShowDialog();
+            }
+        }
     }
 }

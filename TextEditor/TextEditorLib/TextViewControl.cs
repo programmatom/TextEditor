@@ -478,7 +478,11 @@ namespace TextEditor
                                 debugWidth = info.GetExtent(graphics).Width;
                             }
                         }
-                        Debug.Assert(width == debugWidth);
+                        if (width != debugWidth)
+                        {
+                            Debugger.Log(0, "TextViewControl.LineWidthCache", String.Format("LineWidthCache bad value - actual: {0} cached: {1}" + Environment.NewLine, debugWidth, width));
+                            Debug.Assert(false);
+                        }
 #endif
                     }
                     width += horizontalOverflow;
@@ -1350,6 +1354,11 @@ namespace TextEditor
         {
             ValidateHardened();
             SelPoint oldSelectionActive = SelectionActive;
+            if ((startLine < 0) || (startChar < 0) || (endLine < 0) || (endCharPlusOne < 0))
+            {
+                Debug.Assert(false);
+                throw new ArgumentException();
+            }
             if ((startLine > endLine) || ((startLine == endLine) && (startChar > endCharPlusOne)))
             {
                 // Start line after end line

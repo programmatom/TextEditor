@@ -28,7 +28,11 @@ namespace TextEditor
 {
     public class LineWidthCache
     {
+#if DEBUG
+        private const int MaxCount = 200;
+#else
         private const int MaxCount = 1000;
+#endif
         private static bool EnableLogging = false; // TODO: make 'const' once code is stabilized
 
         private int start;
@@ -199,7 +203,11 @@ namespace TextEditor
             {
                 int before = start - index;
                 int after = count - before;
-                widths.RemoveRange(start, after);
+                if (after > widths.Count)
+                {
+                    after = widths.Count;
+                }
+                widths.RemoveRange(0, after);
                 start -= before;
             }
             else if (index < start + widths.Count)
