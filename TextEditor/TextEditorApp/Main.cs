@@ -83,10 +83,58 @@ namespace TextEditor
             return applicationDataPath;
         }
 
+		#if WINDOWS
+		#else
+		private class MonoTraceListener : TraceListener
+		{
+			private static void Interact(string message)
+			{
+				StackTrace s = new StackTrace(5);
+				DialogResult r = MessageBox.Show(message + Environment.NewLine + s.ToString(), "Assert Failed", MessageBoxButtons.AbortRetryIgnore);
+				switch (r)
+				{
+					case DialogResult.Abort:
+						Environment.Exit(-1);
+						break;
+					case DialogResult.Retry:
+						Debugger.Break();
+						break;
+					case DialogResult.Ignore:
+						break;
+				}
+			}
+
+			//public override void Fail(string message)
+			//{
+			//	base.Fail(message); -- base delegates to Fail(string, string)
+			//	Interact(message);
+			//}
+
+			public override void Fail(string message, string detailMessage)
+			{
+				base.Fail(message, detailMessage);
+				Interact(String.Format("{0} - {1}", message, detailMessage));
+			}
+
+			public override void Write(string message)
+			{
+			}
+
+			public override void WriteLine(string message)
+			{
+			}
+		}
+		#endif
+
         [STAThread]
         private static void Main(string[] args)
         {
-            LoadSettings();
+			#if WINDOWS
+			#else
+			Debug.Listeners.Add(new MonoTraceListener());
+			#endif
+
+			LoadSettings();
 
             #region Debugger Attach Helper
             {
