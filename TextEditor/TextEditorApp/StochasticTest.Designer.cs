@@ -57,12 +57,16 @@ namespace TextEditor
             this.buttonStop = new System.Windows.Forms.Button();
             this.label2 = new System.Windows.Forms.Label();
             this.labelOperationCount = new System.Windows.Forms.Label();
-            this.timerUpdateStatus = new System.Windows.Forms.Timer(this.components);
-            this.timerTask = new System.Timers.Timer();
             this.label3 = new System.Windows.Forms.Label();
             this.label4 = new System.Windows.Forms.Label();
             this.labelLines = new System.Windows.Forms.Label();
             this.labelCharacters = new System.Windows.Forms.Label();
+            this.label5 = new System.Windows.Forms.Label();
+            this.labelMode = new System.Windows.Forms.Label();
+            this.timerUpdateStatus = new System.Windows.Forms.Timer(this.components);
+            this.timerTask = new System.Timers.Timer();
+            this.label6 = new System.Windows.Forms.Label();
+            this.labelRandomSeed = new System.Windows.Forms.Label();
             this.tableLayoutPanel1.SuspendLayout();
             this.flowLayoutPanel1.SuspendLayout();
             ((System.ComponentModel.ISupportInitialize)(this.timerTask)).BeginInit();
@@ -77,21 +81,27 @@ namespace TextEditor
             this.tableLayoutPanel1.ColumnStyles.Add(new System.Windows.Forms.ColumnStyle());
             this.tableLayoutPanel1.Controls.Add(this.label1, 0, 0);
             this.tableLayoutPanel1.Controls.Add(this.labelElapsedTime, 1, 0);
-            this.tableLayoutPanel1.Controls.Add(this.flowLayoutPanel1, 0, 4);
+            this.tableLayoutPanel1.Controls.Add(this.flowLayoutPanel1, 0, 6);
             this.tableLayoutPanel1.Controls.Add(this.label2, 0, 1);
             this.tableLayoutPanel1.Controls.Add(this.labelOperationCount, 1, 1);
             this.tableLayoutPanel1.Controls.Add(this.label3, 0, 2);
             this.tableLayoutPanel1.Controls.Add(this.label4, 0, 3);
             this.tableLayoutPanel1.Controls.Add(this.labelLines, 1, 2);
             this.tableLayoutPanel1.Controls.Add(this.labelCharacters, 1, 3);
+            this.tableLayoutPanel1.Controls.Add(this.label5, 0, 4);
+            this.tableLayoutPanel1.Controls.Add(this.labelMode, 1, 4);
+            this.tableLayoutPanel1.Controls.Add(this.label6, 0, 5);
+            this.tableLayoutPanel1.Controls.Add(this.labelRandomSeed, 1, 5);
             this.tableLayoutPanel1.Dock = System.Windows.Forms.DockStyle.Fill;
             this.tableLayoutPanel1.Location = new System.Drawing.Point(0, 0);
             this.tableLayoutPanel1.Name = "tableLayoutPanel1";
-            this.tableLayoutPanel1.RowCount = 5;
+            this.tableLayoutPanel1.RowCount = 7;
             this.tableLayoutPanel1.RowStyles.Add(new System.Windows.Forms.RowStyle());
             this.tableLayoutPanel1.RowStyles.Add(new System.Windows.Forms.RowStyle());
             this.tableLayoutPanel1.RowStyles.Add(new System.Windows.Forms.RowStyle());
             this.tableLayoutPanel1.RowStyles.Add(new System.Windows.Forms.RowStyle());
+            this.tableLayoutPanel1.RowStyles.Add(new System.Windows.Forms.RowStyle());
+            this.tableLayoutPanel1.RowStyles.Add(new System.Windows.Forms.RowStyle(System.Windows.Forms.SizeType.Absolute, 20F));
             this.tableLayoutPanel1.RowStyles.Add(new System.Windows.Forms.RowStyle(System.Windows.Forms.SizeType.Percent, 100F));
             this.tableLayoutPanel1.Size = new System.Drawing.Size(244, 116);
             this.tableLayoutPanel1.TabIndex = 0;
@@ -122,9 +132,9 @@ namespace TextEditor
             this.flowLayoutPanel1.AutoSize = true;
             this.tableLayoutPanel1.SetColumnSpan(this.flowLayoutPanel1, 2);
             this.flowLayoutPanel1.Controls.Add(this.buttonStop);
-            this.flowLayoutPanel1.Location = new System.Drawing.Point(81, 55);
+            this.flowLayoutPanel1.Location = new System.Drawing.Point(81, 88);
             this.flowLayoutPanel1.Name = "flowLayoutPanel1";
-            this.flowLayoutPanel1.Size = new System.Drawing.Size(81, 29);
+            this.flowLayoutPanel1.Size = new System.Drawing.Size(81, 25);
             this.flowLayoutPanel1.TabIndex = 2;
             // 
             // buttonStop
@@ -157,19 +167,6 @@ namespace TextEditor
             this.labelOperationCount.Name = "labelOperationCount";
             this.labelOperationCount.Size = new System.Drawing.Size(100, 13);
             this.labelOperationCount.TabIndex = 4;
-            // 
-            // timerUpdateStatus
-            // 
-            this.timerUpdateStatus.Enabled = true;
-            this.timerUpdateStatus.Interval = 1000;
-            this.timerUpdateStatus.Tick += new System.EventHandler(this.timerUpdateStatus_Tick);
-            // 
-            // timerTask
-            // 
-            this.timerTask.AutoReset = false;
-            this.timerTask.Enabled = true;
-            this.timerTask.SynchronizingObject = this;
-            this.timerTask.Elapsed += new System.Timers.ElapsedEventHandler(this.timerTask_Elapsed);
             // 
             // label3
             // 
@@ -211,6 +208,60 @@ namespace TextEditor
             this.labelCharacters.Size = new System.Drawing.Size(100, 13);
             this.labelCharacters.TabIndex = 8;
             // 
+            // label5
+            // 
+            this.label5.Anchor = ((System.Windows.Forms.AnchorStyles)((System.Windows.Forms.AnchorStyles.Left | System.Windows.Forms.AnchorStyles.Right)));
+            this.label5.AutoSize = true;
+            this.label5.Location = new System.Drawing.Point(3, 52);
+            this.label5.Name = "label5";
+            this.label5.Size = new System.Drawing.Size(87, 13);
+            this.label5.TabIndex = 9;
+            this.label5.Text = "Mode:";
+            // 
+            // labelMode
+            // 
+            this.labelMode.Anchor = System.Windows.Forms.AnchorStyles.Left;
+            this.labelMode.AutoSize = true;
+            this.labelMode.Location = new System.Drawing.Point(96, 52);
+            this.labelMode.MinimumSize = new System.Drawing.Size(100, 13);
+            this.labelMode.Name = "labelMode";
+            this.labelMode.Size = new System.Drawing.Size(100, 13);
+            this.labelMode.TabIndex = 10;
+            // 
+            // timerUpdateStatus
+            // 
+            this.timerUpdateStatus.Enabled = true;
+            this.timerUpdateStatus.Interval = 1000;
+            this.timerUpdateStatus.Tick += new System.EventHandler(this.timerUpdateStatus_Tick);
+            // 
+            // timerTask
+            // 
+            this.timerTask.AutoReset = false;
+            this.timerTask.Enabled = true;
+            this.timerTask.SynchronizingObject = this;
+            this.timerTask.Elapsed += new System.Timers.ElapsedEventHandler(this.timerTask_Elapsed);
+            // 
+            // label6
+            // 
+            this.label6.Anchor = ((System.Windows.Forms.AnchorStyles)((System.Windows.Forms.AnchorStyles.Left | System.Windows.Forms.AnchorStyles.Right)));
+            this.label6.AutoSize = true;
+            this.label6.Location = new System.Drawing.Point(3, 68);
+            this.label6.Name = "label6";
+            this.label6.Size = new System.Drawing.Size(87, 13);
+            this.label6.TabIndex = 11;
+            this.label6.Text = "Random Seed:";
+            // 
+            // labelRandomSeed
+            // 
+            this.labelRandomSeed.Anchor = System.Windows.Forms.AnchorStyles.Left;
+            this.labelRandomSeed.AutoSize = true;
+            this.labelRandomSeed.Location = new System.Drawing.Point(96, 68);
+            this.labelRandomSeed.MinimumSize = new System.Drawing.Size(100, 13);
+            this.labelRandomSeed.Name = "labelRandomSeed";
+            this.labelRandomSeed.Size = new System.Drawing.Size(100, 13);
+            this.labelRandomSeed.TabIndex = 12;
+            this.labelRandomSeed.Text = "label7";
+            // 
             // StochasticTest
             // 
             this.AutoScaleDimensions = new System.Drawing.SizeF(6F, 13F);
@@ -247,5 +298,9 @@ namespace TextEditor
         private System.Windows.Forms.Label label4;
         private System.Windows.Forms.Label labelLines;
         private System.Windows.Forms.Label labelCharacters;
+        private System.Windows.Forms.Label label5;
+        private System.Windows.Forms.Label labelMode;
+        private System.Windows.Forms.Label label6;
+        private System.Windows.Forms.Label labelRandomSeed;
     }
 }

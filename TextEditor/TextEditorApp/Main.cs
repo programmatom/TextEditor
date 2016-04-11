@@ -20,7 +20,6 @@
  * 
 */
 using System;
-using System.Collections.Generic;
 using System.Diagnostics;
 using System.IO;
 using System.Windows.Forms;
@@ -34,10 +33,22 @@ namespace TextEditor
         public static EditorConfigList Config = new EditorConfigList();
 
         private const string SettingsFileName = "Settings.xml";
+        private const string LocalApplicationDirectoryName = "TextEditor";
+        private static string GetSettingsPath(bool create)
+        {
+            string root = Environment.GetFolderPath(Environment.SpecialFolder.ApplicationData, Environment.SpecialFolderOption.None);
+            string dir = Path.Combine(root, LocalApplicationDirectoryName);
+            if (create)
+            {
+                Directory.CreateDirectory(dir);
+            }
+            string path = Path.Combine(dir, SettingsFileName);
+            return path;
+        }
 
         public static void LoadSettings()
         {
-            string path = Path.Combine(GetLocalAppDataPath(false, true), SettingsFileName);
+            string path = GetSettingsPath(false/*create*/);
             if (File.Exists(path))
             {
                 try
@@ -54,10 +65,9 @@ namespace TextEditor
 
         public static void SaveSettings()
         {
-            Config.Save(Path.Combine(GetLocalAppDataPath(true, true), SettingsFileName));
+            Config.Save(GetSettingsPath(true/*create*/));
         }
 
-        private const string LocalApplicationDirectoryName = "TextEditor";
         private static string GetLocalAppDataPath(bool create, bool roaming)
         {
             string applicationDataPath = Environment.GetEnvironmentVariable(roaming ? "APPDATA" : "LOCALAPPDATA");

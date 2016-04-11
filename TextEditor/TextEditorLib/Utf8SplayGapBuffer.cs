@@ -47,8 +47,8 @@ namespace TextEditor
 #else
         public const bool EnableValidate = false;
 #endif
-        public const int ValidateCutoffLines1 = 50;
-        public const int ValidateCutoffLines2 = 1500;
+        public const int ValidateCutoffLines1 = 100; // cutoff for very slow thorough validation
+        public const int ValidateCutoffLines2 = 500; // cutoff for slow moderate validation
 
         private static readonly byte[] WindowsLF = new byte[] { (byte)'\r', (byte)'\n' };
         private static readonly byte[] MacintoshLF = new byte[] { (byte)'\r' };
@@ -417,7 +417,7 @@ namespace TextEditor
             skipList.LineInserted(
                 currentLine,
                 buffer.Length + WindowsLF.Length,
-                delegate(int line)
+                delegate (int line)
                 {
                     return GetStartIndexOfLineRelative(line - currentLine, currentOffset);
                 });

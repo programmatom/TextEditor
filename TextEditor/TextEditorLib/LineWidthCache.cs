@@ -28,12 +28,12 @@ namespace TextEditor
 {
     public class LineWidthCache
     {
+        private const int MaxCount = 512;
 #if DEBUG
-        private const int MaxCount = 200;
+        private static readonly bool EnableLogging = false;
 #else
-        private const int MaxCount = 1000;
+        private const bool EnableLogging = false;
 #endif
-        private static bool EnableLogging = false; // TODO: make 'const' once code is stabilized
 
         private int start;
         private readonly List<int> widths = new List<int>(MaxCount); // as 1s-complement, so default (0) can mean invalid

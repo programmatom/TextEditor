@@ -33,14 +33,23 @@ namespace TextEditor
         private readonly TextEditControl textEditControl;
         private readonly DateTime started;
         private readonly Queue<Action> queue = new Queue<Action>();
-        private readonly Random random = new Random();
+        private readonly int randomSeed;
+        private readonly Random random;
 
         private int operationCount;
         private string state = String.Empty;
 
         public StochasticTest(TextEditControl textEditControl)
+            : this(textEditControl, Environment.TickCount)
+        {
+        }
+
+        public StochasticTest(TextEditControl textEditControl, int randomSeed)
         {
             this.textEditControl = textEditControl;
+            this.randomSeed = randomSeed;
+            this.random = new Random(randomSeed);
+            Debugger.Log(0, "TextEditorApp.StochasticTest", String.Format("StochasticTest: random seed = {0}" + Environment.NewLine, randomSeed));
 
             InitializeComponent();
             this.Icon = TextEditorApp.Properties.Resources.Icon2;
@@ -64,8 +73,10 @@ namespace TextEditor
             elapsed = new TimeSpan(elapsed.Days, elapsed.Hours, elapsed.Minutes, elapsed.Seconds, 0);
             this.labelElapsedTime.Text = elapsed.ToString("g");
             this.labelOperationCount.Text = operationCount.ToString("N0");
-            this.labelLines.Text = textEditControl.Count.ToString();
-            this.labelCharacters.Text = state.Length.ToString();
+            this.labelLines.Text = textEditControl.Count.ToString("N0");
+            this.labelCharacters.Text = state.Length.ToString("N0");
+            this.labelMode.Text = tuning.Label;
+            this.labelRandomSeed.Text = randomSeed.ToString();
         }
 
         private void timerUpdateStatus_Tick(object sender, EventArgs e)
@@ -112,15 +123,68 @@ namespace TextEditor
             }
         }
 
+        private class Tuning
+        {
+            public static readonly Tuning Grow = new Tuning(
+                Label: "Grow",
+                WordsPerLineLimit: 10,
+                WordLengthLimit: 10,
+                LineLimit: 10000,
+                Exponent: 1.1,
+                ReplaceRangeAffinity: 1000);
+
+            public static readonly Tuning Shrink = new Tuning(
+                Label: "Shrink",
+                WordsPerLineLimit: 10,
+                WordLengthLimit: 10,
+                LineLimit: 10000,
+                Exponent: .6,
+                ReplaceRangeAffinity: 500);
+
+            public readonly string Label;
+            public readonly int WordsPerLineLimit;
+            public readonly int WordLengthLimit;
+            public readonly int LineLimit;
+            public readonly double Exponent;
+            public readonly int ReplaceRangeAffinity;
+
+            public Tuning(
+                string Label,
+                int WordsPerLineLimit,
+                int WordLengthLimit,
+                int LineLimit,
+                double Exponent,
+                int ReplaceRangeAffinity)
+            {
+                this.Label = Label;
+                this.WordsPerLineLimit = WordsPerLineLimit;
+                this.WordLengthLimit = WordLengthLimit;
+                this.LineLimit = LineLimit;
+                this.Exponent = Exponent;
+                this.ReplaceRangeAffinity = ReplaceRangeAffinity;
+            }
+        }
+
+        private Tuning tuning = Tuning.Grow;
+
         private int lastOffset;
         private void GenerateTask()
         {
             bool oversized = false;
 
+            if (textEditControl.Count > 10000)
+            {
+                tuning = Tuning.Shrink;
+            }
+            else if (textEditControl.Count < 500)
+            {
+                tuning = Tuning.Grow;
+            }
+
         Retry:
+            lastOffset = Math.Min(Math.Max(lastOffset, 0), state.Length); // ensure valid given deletion may have occurred
             const int DeclusteringLikelihood = 10;
             const int ClusteringAffinity = 25;
-            const int ReplaceRangeAffinity = 1000;
             const int UndoRedoLikelihood = 10;
             const int UndoRedoMaxDepth = 20;
             const double UndoRedoBias = 2;
@@ -146,7 +210,7 @@ namespace TextEditor
                         Position start = random.Next(DeclusteringLikelihood) != 0
                             ? GetNearbyPosition(OffsetToValidPosition(lastOffset), ClusteringAffinity)
                             : GetRandomValidPosition();
-                        Position end = !oversized ? GetNearbyPosition(start, ReplaceRangeAffinity) : GetRandomValidPosition();
+                        Position end = !oversized ? GetNearbyPosition(start, tuning.ReplaceRangeAffinity) : GetRandomValidPosition();
                         EnsurePositionOrdering(ref start, ref end);
                         queue.Enqueue(new ActionSelect(this, start, end));
                         queue.Enqueue(new ActionReplace(this, start, end));
@@ -235,6 +299,8 @@ namespace TextEditor
         private static readonly char NewLineFirstChar = Environment.NewLine[0];
         private Position OffsetToValidPosition(int offset)
         {
+            Debug.Assert((offset >= 0) && (offset <= state.Length));
+
             if (offset < state.Length)
             {
                 int nl = Environment.NewLine.IndexOf(state[offset]);
@@ -284,6 +350,11 @@ namespace TextEditor
                 this.offset = offset;
                 this.l = l;
                 this.c = c;
+            }
+
+            public override string ToString()
+            {
+                return String.Format("[{0}: {1}.{2}]", offset, l, c);
             }
         }
 
@@ -368,19 +439,15 @@ namespace TextEditor
             }
 
             private const string Domain = "abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789";
-            private const int WordsPerLineLimit = 10;
-            private const int WordLengthLimit = 10;
-            private const int LineLimit = 10000;
-            private const double Exponent = .66;
             public override void Do()
             {
                 StringBuilder sb = new StringBuilder();
-                int lines = context.TruncatedHyperbolicDistribution(LineLimit, Exponent);
+                int lines = context.TruncatedHyperbolicDistribution(context.tuning.LineLimit, context.tuning.Exponent) - 1;
                 for (int i = 0; i <= lines; i++)
                 {
-                    for (int j = context.random.Next(WordsPerLineLimit); j >= 0; j--)
+                    for (int j = context.random.Next(context.tuning.WordsPerLineLimit); j >= 0; j--)
                     {
-                        for (int k = context.random.Next(WordLengthLimit); k >= 0; k--)
+                        for (int k = context.random.Next(context.tuning.WordLengthLimit); k >= 0; k--)
                         {
                             sb.Append(Domain[context.random.Next(Domain.Length)]);
                         }
