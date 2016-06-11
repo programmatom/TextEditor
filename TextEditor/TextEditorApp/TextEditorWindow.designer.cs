@@ -90,6 +90,7 @@ namespace TextEditor
             this.defaultSettingsToolStripMenuItem = new System.Windows.Forms.ToolStripMenuItem();
             this.toolsToolStripMenuItem = new System.Windows.Forms.ToolStripMenuItem();
             this.testInlineModeToolStripMenuItem = new System.Windows.Forms.ToolStripMenuItem();
+            this.stochasticTestToolStripMenuItem = new System.Windows.Forms.ToolStripMenuItem();
             this.toolStripMenuItem15 = new System.Windows.Forms.ToolStripSeparator();
             this.previousUTF16SurrogatePairToolStripMenuItem = new System.Windows.Forms.ToolStripMenuItem();
             this.nextUTF16SurrogatePairToolStripMenuItem = new System.Windows.Forms.ToolStripMenuItem();
@@ -112,7 +113,6 @@ namespace TextEditor
             this.protectedStorageFactory = new TextEditor.ProtectedStorageFactory();
             this.utf8SplayGapBufferFactory = new TextEditor.Utf8SplayGapStorageFactory();
             this.dpiChangeHelper = new TextEditor.DpiChangeHelper(this.components);
-            this.stochasticTestToolStripMenuItem = new System.Windows.Forms.ToolStripMenuItem();
             this.menuStrip.SuspendLayout();
             this.tableLayoutPanel1.SuspendLayout();
             this.toolStrip.SuspendLayout();
@@ -130,7 +130,7 @@ namespace TextEditor
             this.menuStrip.Location = new System.Drawing.Point(0, 0);
             this.menuStrip.Name = "menuStrip";
             this.menuStrip.Padding = new System.Windows.Forms.Padding(0);
-            this.menuStrip.Size = new System.Drawing.Size(360, 24);
+            this.menuStrip.Size = new System.Drawing.Size(329, 24);
             this.menuStrip.TabIndex = 0;
             // 
             // fileToolStripMenuItem
@@ -595,6 +595,13 @@ namespace TextEditor
             this.testInlineModeToolStripMenuItem.Text = "Test Inline Mode...";
             this.testInlineModeToolStripMenuItem.Click += new System.EventHandler(this.testInlineModeToolStripMenuItem_Click);
             // 
+            // stochasticTestToolStripMenuItem
+            // 
+            this.stochasticTestToolStripMenuItem.Name = "stochasticTestToolStripMenuItem";
+            this.stochasticTestToolStripMenuItem.Size = new System.Drawing.Size(256, 22);
+            this.stochasticTestToolStripMenuItem.Text = "Stochastic Test";
+            this.stochasticTestToolStripMenuItem.Click += new System.EventHandler(this.stochasticTestToolStripMenuItem_Click);
+            // 
             // toolStripMenuItem15
             // 
             this.toolStripMenuItem15.Name = "toolStripMenuItem15";
@@ -671,10 +678,10 @@ namespace TextEditor
             this.toolStripTextBoxColumn,
             this.toolStripLabel2,
             this.toolStripTextBoxCharacter});
-            this.toolStrip.Location = new System.Drawing.Point(360, 0);
+            this.toolStrip.Location = new System.Drawing.Point(329, 0);
             this.toolStrip.Name = "toolStrip";
             this.toolStrip.Padding = new System.Windows.Forms.Padding(0);
-            this.toolStrip.Size = new System.Drawing.Size(273, 25);
+            this.toolStrip.Size = new System.Drawing.Size(304, 25);
             this.toolStrip.TabIndex = 2;
             // 
             // toolStripLabelBackingStore
@@ -757,13 +764,6 @@ namespace TextEditor
             // dpiChangeHelper
             // 
             this.dpiChangeHelper.Form = this;
-            // 
-            // stochasticTestToolStripMenuItem
-            // 
-            this.stochasticTestToolStripMenuItem.Name = "stochasticTestToolStripMenuItem";
-            this.stochasticTestToolStripMenuItem.Size = new System.Drawing.Size(256, 22);
-            this.stochasticTestToolStripMenuItem.Text = "Stochastic Test";
-            this.stochasticTestToolStripMenuItem.Click += new System.EventHandler(this.stochasticTestToolStripMenuItem_Click);
             // 
             // TextEditorWindow
             // 

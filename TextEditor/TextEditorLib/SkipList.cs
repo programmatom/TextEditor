@@ -24,6 +24,8 @@ using System.Collections.Generic;
 using System.Diagnostics;
 using System.Text;
 
+using TreeLib;
+
 namespace TextEditor
 {
     public class SkipList
@@ -34,37 +36,38 @@ namespace TextEditor
         public const int SkipListSparseness = 4096;
 #endif
         // index 0 is reserved for prefix placeholder, so all lines are offset by +1
-        private readonly SplaySparseRangeArray skipList = new SplaySparseRangeArray();
+        private readonly SplayTreeRange2List skipList = new SplayTreeRange2List();
 
         public void Reset(int prefixLength, int suffixLength)
         {
             skipList.Clear();
-            skipList.Insert(0, 1, prefixLength);
-            skipList.Insert(1, 1, suffixLength);
+            skipList.Insert(0, Side.X, 1, prefixLength);
+            skipList.Insert(1, Side.X, 1, suffixLength);
         }
 
         public void GetCountYExtent(int line, out int numLines, out int charIndex, out int charLength)
         {
             line++;
-            skipList.GetXCountYStartYCount(line, out numLines, out charIndex, out charLength);
+            skipList.Get(line, Side.X, out charIndex, out numLines, out charLength);
         }
 
         public bool Next(int line, out int nextLine)
         {
             line++;
-            bool result = skipList.NextX(line, out nextLine);
+            bool result = skipList.NearestGreater(line, Side.X, out nextLine);
             nextLine--;
             return result;
         }
 
-        public int LineCount { get { return skipList.XSize - 1; } }
+        public int LineCount { get { return skipList.GetExtent(Side.X) - 1; } }
 
-        public int CharCount { get { return skipList.YSize; } }
+        public int CharCount { get { return skipList.GetExtent(Side.Y); } }
 
         public void NearestLessOrEqualCountYExtent(int line, out int startLine, out int numLines, out int charIndex, out int charCount)
         {
             line++;
-            skipList.NearestLessOrEqualXCountYStartYCount(line, out startLine, out numLines, out charIndex, out charCount);
+            skipList.NearestLessOrEqual(line, Side.X, out startLine);
+            skipList.Get(startLine, Side.X, out charIndex, out numLines, out charCount);
             startLine--;
         }
 
@@ -72,9 +75,10 @@ namespace TextEditor
         {
             line++;
             int startLine, numLines, charIndex, charLength;
-            skipList.NearestLessOrEqualXCountYStartYCount(line, out startLine, out numLines, out charIndex, out charLength);
-            skipList.Remove(startLine, numLines);
-            skipList.Insert(startLine, numLines, charLength + charDelta);
+            skipList.NearestLessOrEqual(line, Side.X, out startLine);
+            skipList.Get(startLine, Side.X, out charIndex, out numLines, out charLength);
+            skipList.Delete(startLine, Side.X);
+            skipList.Insert(startLine, Side.X, numLines, charLength + charDelta);
         }
 
         public void BulkLinesInserted(int startLine, int numLines, int charOffset, int charLength)
@@ -83,7 +87,8 @@ namespace TextEditor
 
 #if DEBUG
             int previousStartLine, previousNumLines, previousCharOffset, previousCharLength;
-            skipList.NearestLessOrEqualXCountYStartYCount(startLine, out previousStartLine, out previousNumLines, out previousCharOffset, out previousCharLength);
+            skipList.NearestLessOrEqual(startLine, Side.X, out previousStartLine);
+            skipList.Get(previousStartLine, Side.X, out previousCharOffset, out previousNumLines, out previousCharLength);
             if (previousStartLine != startLine)
             {
                 // this general case should never happen in our scenario
@@ -97,7 +102,7 @@ namespace TextEditor
             }
 #endif
 
-            skipList.Insert(startLine, numLines, charLength);
+            skipList.Insert(startLine, Side.X, numLines, charLength);
         }
 
         public delegate int GetOffsetOfLineMethod(int line);
@@ -107,11 +112,12 @@ namespace TextEditor
             Debug.Assert(charsAdded != 0);
             lineEndOf++;
             int startLine, numLines, charIndex, charLength;
-            skipList.NearestLessOrEqualXCountYStartYCount(lineEndOf, out startLine, out numLines, out charIndex, out charLength);
-            skipList.Remove(startLine, numLines);
+            skipList.NearestLessOrEqual(lineEndOf, Side.X, out startLine);
+            skipList.Get(startLine, Side.X, out charIndex, out numLines, out charLength);
+            skipList.Delete(startLine, Side.X);
             numLines++;
             charLength += charsAdded;
-            skipList.Insert(startLine, numLines, charLength);
+            skipList.Insert(startLine, Side.X, numLines, charLength);
 
             if (numLines > SkipListSparseness)
             {
@@ -121,9 +127,9 @@ namespace TextEditor
                 midpointLine++;
                 int firstHalfCharCount = midpointIndex - charIndex;
 
-                skipList.Remove(startLine, numLines);
-                skipList.Insert(startLine, midpointLine - startLine, firstHalfCharCount);
-                skipList.Insert(midpointLine, startLine + numLines - midpointLine, charLength - firstHalfCharCount);
+                skipList.Delete(startLine, Side.X);
+                skipList.Insert(startLine, Side.X, midpointLine - startLine, firstHalfCharCount);
+                skipList.Insert(midpointLine, Side.X, startLine + numLines - midpointLine, charLength - firstHalfCharCount);
             }
         }
 
@@ -132,23 +138,24 @@ namespace TextEditor
             Debug.Assert(charsAdded < 0);
             lineEndOf++;
             int startLine, numLines, charIndex, charLength;
-            skipList.NearestLessOrEqualXCountYStartYCount(lineEndOf, out startLine, out numLines, out charIndex, out charLength);
-            skipList.Remove(startLine, numLines);
+            skipList.NearestLessOrEqual(lineEndOf, Side.X, out startLine);
+            skipList.Get(startLine, Side.X, out charIndex, out numLines, out charLength);
+            skipList.Delete(startLine, Side.X);
             numLines--;
             charLength += charsAdded;
             Debug.Assert((numLines == 0) == (charLength == 0));
             if (numLines != 0)
             {
-                skipList.Insert(startLine, numLines, charLength);
+                skipList.Insert(startLine, Side.X, numLines, charLength);
 
                 int nextStartLine;
-                if ((numLines <= SkipListSparseness / 2) && skipList.NextX(startLine, out nextStartLine))
+                if ((numLines <= SkipListSparseness / 2) && skipList.NearestGreater(startLine, Side.X, out nextStartLine))
                 {
                     int nextNumLines, nextCharIndex, nextCharLength;
-                    skipList.GetXCountYStartYCount(nextStartLine, out nextNumLines, out nextCharIndex, out nextCharLength);
-                    skipList.Remove(nextStartLine, nextNumLines);
-                    skipList.Remove(startLine, numLines);
-                    skipList.Insert(startLine, numLines + nextNumLines, charLength + nextCharLength);
+                    skipList.Get(nextStartLine, Side.X, out nextCharIndex, out nextNumLines, out nextCharLength);
+                    skipList.Delete(nextStartLine, Side.X);
+                    skipList.Delete(startLine, Side.X);
+                    skipList.Insert(startLine, Side.X, numLines + nextNumLines, charLength + nextCharLength);
                 }
             }
         }

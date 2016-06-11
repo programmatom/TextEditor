@@ -25,6 +25,8 @@ using System.Diagnostics;
 using System.IO;
 using System.Text;
 
+using TreeLib;
+
 namespace TextEditor
 {
     public abstract class Utf8GapBuffer
@@ -50,6 +52,8 @@ namespace TextEditor
         public const int ValidateCutoffLines1 = 100; // cutoff for very slow thorough validation
         public const int ValidateCutoffLines2 = 500; // cutoff for slow moderate validation
 
+        private const int BlockSize = 4096;
+
         private static readonly byte[] WindowsLF = new byte[] { (byte)'\r', (byte)'\n' };
         private static readonly byte[] MacintoshLF = new byte[] { (byte)'\r' };
         private static readonly byte[] UnixLF = new byte[] { (byte)'\n' };
@@ -58,7 +62,7 @@ namespace TextEditor
         private static readonly byte[] LineEndingChars = WindowsLF; // just both
 
         private byte[] defaultLineEnding = WindowsLF; // TODO: code for changing default line ending
-        private SplayVector<byte> vector = new SplayVector<byte>();
+        private HugeList<byte> vector = new HugeList<byte>(typeof(SplayTreeRangeMap<>), BlockSize);
         private SkipList skipList = new SkipList();
 
         private int totalLines;
@@ -179,10 +183,10 @@ namespace TextEditor
             }
 
             byte[] ifix = new byte[2];
-            vector.CopyOut(prefixLength - WindowsLF.Length, ifix);
+            vector.CopyTo(prefixLength - WindowsLF.Length, ifix, 0, ifix.Length);
             Debug.Assert((ifix[0] == WindowsLF[0]) && (ifix[1] == WindowsLF[1]));
             ifix = new byte[2];
-            vector.CopyOut(vector.Count - suffixLength, ifix);
+            vector.CopyTo(vector.Count - suffixLength, ifix, 0, ifix.Length);
             Debug.Assert((ifix[0] == WindowsLF[0]) && (ifix[1] == WindowsLF[1]));
 
             Debug.Assert(lineOffsets.Count == totalLines);
@@ -361,7 +365,7 @@ namespace TextEditor
             int lineBodyLength, lineEndingLength;
             GetCurrentLineExtent(currentOffset, out lineBodyLength, out lineEndingLength);
             byte[] bytes = new byte[lineBodyLength];
-            vector.CopyOut(currentOffset, bytes);
+            vector.CopyTo(currentOffset, bytes, 0, bytes.Length);
             return bytes;
         }
 
@@ -470,7 +474,7 @@ namespace TextEditor
             Encoding encoding,
             out LineEndingInfo lineEndingInfo)
         {
-            byte[] buffer = new byte[vector.TargetBlockSize];
+            byte[] buffer = new byte[vector.MaxBlockSize];
             while (true)
             {
                 int read = stream.Read(buffer, 0, buffer.Length);
@@ -614,12 +618,12 @@ namespace TextEditor
 
         private class VectorReadStream : Stream
         {
-            private SplayVector<byte> vector;
+            private HugeList<byte> vector;
             private int start;
             private int length;
             private int position;
 
-            public VectorReadStream(SplayVector<byte> vector, int start, int length)
+            public VectorReadStream(HugeList<byte> vector, int start, int length)
             {
                 if (unchecked((uint)start > (uint)vector.Count) || unchecked((uint)start + (uint)length > (uint)vector.Count))
                 {
@@ -667,7 +671,7 @@ namespace TextEditor
                 do
                 {
                     c = Math.Min(count, length - position);
-                    vector.CopyOut(start + position, buffer, offset, c);
+                    vector.CopyTo(start + position, buffer, offset, c);
                     read += c;
                     count -= c;
                     offset += c;

@@ -77,10 +77,17 @@
   </PropertyGroup>
   <ItemGroup>
     <Reference Include="System" />
-    <Reference Include="System.Data" />
     <Reference Include="System.Drawing" />
     <Reference Include="System.Windows.Forms" />
-    <Reference Include="System.Xml" />
+    <Reference Include="TreeLib">
+      <HintPath>..\..\..\TreeLib\TreeLib\TreeLib\bin\$(Configuration)\TreeLib.dll</HintPath>
+    </Reference>
+    <Reference Include="TreeLibInterface">
+      <HintPath>..\..\..\TreeLib\TreeLib\TreeLibInterface\bin\$(Configuration)\TreeLibInterface.dll</HintPath>
+    </Reference>
+    <Reference Include="TreeLibUtil">
+      <HintPath>..\..\..\TreeLib\TreeLib\TreeLibUtil\bin\$(Configuration)\TreeLibUtil.dll</HintPath>
+    </Reference>
   </ItemGroup>
   <ItemGroup>
     <Compile Include="ANSIEncoding.cs" />
@@ -121,10 +128,6 @@
       <SubType>Component</SubType>
     </Compile>
     <Compile Include="SkipList.cs" />
-    <Compile Include="SplayRangeArray.cs" />
-    <Compile Include="SplaySparseArray.cs" />
-    <Compile Include="SplaySparseRangeArray.cs" />
-    <Compile Include="SplayVector.cs" />
     <Compile Include="StringStorage.cs">
       <SubType>Component</SubType>
     </Compile>
