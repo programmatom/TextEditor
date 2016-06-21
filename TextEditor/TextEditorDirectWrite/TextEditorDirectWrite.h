@@ -122,7 +122,8 @@ namespace TextEditor
 
 		HRESULT Init(
 			TextServiceDirectWriteInterop^ service,
-			String^ line);
+			String^ line,
+			int lineLength);
 
 		void _Dispose();
 

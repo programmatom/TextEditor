@@ -170,7 +170,8 @@ namespace TextEditor
             int fontHeight,
             string line)
         {
-            if (line.IndexOfAny(new char[] { '\r', '\n' }) >= 0)
+            int index;
+            if ((index = line.IndexOfAny(new char[] { '\r', '\n' })) >= 0)
             {
                 Debug.Assert(false);
                 throw new ArgumentException();

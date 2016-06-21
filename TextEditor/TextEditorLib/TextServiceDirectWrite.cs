@@ -136,16 +136,31 @@ namespace TextEditor
             int fontHeight, // TODO: pass this through
             string line)
         {
-            if (line.IndexOfAny(new char[] { '\r', '\n' }) >= 0)
+            int index;
+            if ((index = line.IndexOfAny(new char[] { '\r', '\n' })) >= 0)
             {
                 Debug.Assert(false);
                 throw new ArgumentException();
             }
-            return new TextLayout(
-                this,
-                line,
-                graphics,
-                font);
+            try
+            {
+                return new TextLayout(
+                    this,
+                    line,
+                    graphics,
+                    font);
+            }
+            catch (Exception exception)
+            {
+                using (Font font2 = new Font(FontFamily.GenericSansSerif, fontHeight / 2.5f, FontStyle.Regular))
+                {
+                    return new TextLayout(
+                        this,
+                        exception.ToString().Replace("\r", " ").Replace("\n", " "),
+                        graphics,
+                        font2);
+                }
+            }
         }
 
 
@@ -169,7 +184,7 @@ namespace TextEditor
                     text = line;
 
                     lineInterop = new TextServiceLineDirectWriteInterop();
-                    hr = lineInterop.Init(service.interop, line);
+                    hr = lineInterop.Init(service.interop, line, line.Length);
                     if (hr < 0)
                     {
                         Marshal.ThrowExceptionForHR(hr);
@@ -202,7 +217,10 @@ namespace TextEditor
             {
                 lineInterop._Dispose();
 #if true
-                uniscribeLine.Dispose();
+                if (uniscribeLine != null)
+                {
+                    uniscribeLine.Dispose();
+                }
 #else // TODO: support Windows.Data.Text for universal script segmentation support
 #endif
 
@@ -524,7 +542,7 @@ namespace TextEditor
                     localLineInterop = new TextServiceLineDirectWriteInterop();
                 }
 
-                int hr = localLineInterop.Init(interop, text);
+                int hr = localLineInterop.Init(interop, text, text.Length);
                 if (hr < 0)
                 {
                     Marshal.ThrowExceptionForHR(hr);
@@ -572,7 +590,7 @@ namespace TextEditor
                     localLineInterop = new TextServiceLineDirectWriteInterop();
                 }
 
-                int hr = localLineInterop.Init(interop, text);
+                int hr = localLineInterop.Init(interop, text, text.Length);
                 if (hr < 0)
                 {
                     Marshal.ThrowExceptionForHR(hr);

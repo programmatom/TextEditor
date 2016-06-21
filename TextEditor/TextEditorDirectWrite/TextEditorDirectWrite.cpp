@@ -466,7 +466,8 @@ namespace TextEditor
 
 	HRESULT TextServiceLineDirectWriteInterop::Init(
 		TextServiceDirectWriteInterop^ service,
-		String^ line)
+		String^ line,
+		int lineLength)
 	{
 		int hr;
 
@@ -476,17 +477,17 @@ namespace TextEditor
 		}
 
 		this->service = service;
-		totalChars = line->Length;
+		totalChars = lineLength;
 
 		IDWriteTextLayout* textLayout = NULL;
 
-		wchar_t* pwzLine = new wchar_t[line->Length + 1];
+		wchar_t* pwzLine = new wchar_t[lineLength + 1];
 		pin_ptr<const wchar_t> wzLine = PtrToStringChars(line);
-		wcsncpy_s(pwzLine, line->Length + 1, wzLine, line->Length);
+		wcsncpy_s(pwzLine, lineLength + 1, wzLine, lineLength);
 #if 1 // choose
 		hr = service->globals->factory->CreateTextLayout(
 			pwzLine,
-			line->Length,
+			lineLength,
 			service->textFormat,
 			(float)50, // layout width - shouldn't matter with DWRITE_WORD_WRAPPING_NO_WRAP specified
 			(float)service->lineHeight,
@@ -494,7 +495,7 @@ namespace TextEditor
 #else
 		hr = service->factory->CreateGdiCompatibleTextLayout(
 			pwzLine,
-			line->Length,
+			lineLength,
 			service->textFormat,
 			(float)50, // layout width - shouldn't matter with DWRITE_WORD_WRAPPING_NO_WRAP specified
 			(float)service->lineHeight,

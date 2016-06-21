@@ -2539,7 +2539,7 @@ namespace TextEditor
             }
 
             int firstRedrawLine = Math.Min(startLine, selectStartLine);
-            int lastRedrawLine = Math.Max(Math.Max(endLine, selectEndLine), replacedEndCharPlusOne);
+            int lastRedrawLine = Math.Max(endLine, selectEndLine);
 
             bool shift = endLine - startLine != replacement.Count - 1;
 
