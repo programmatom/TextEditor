@@ -127,10 +127,6 @@ namespace TextEditor
                     effectiveBackingStore = BackingStore.String;
                     factory = this.stringStorageFactory;
                     break;
-                case BackingStore.Protected:
-                    effectiveBackingStore = BackingStore.Protected;
-                    factory = this.protectedStorageFactory;
-                    break;
                 case BackingStore.Utf8SplayGapBuffer:
                     effectiveBackingStore = BackingStore.Utf8SplayGapBuffer;
                     factory = this.utf8SplayGapBufferFactory;
@@ -296,7 +292,7 @@ namespace TextEditor
                 }
                 catch (ArgumentException)
                 {
-                    throw new Exception(String.Format("Buffer qualifier '{0}' is not recognized - should be one of '{1}', '{2}', or '{3}'", qualifier, BackingStore.String, BackingStore.Protected, BackingStore.Utf8SplayGapBuffer));
+                    throw new Exception(String.Format("Buffer qualifier '{0}' is not recognized - should be one of '{1}' or '{2}'", qualifier, BackingStore.String, BackingStore.Utf8SplayGapBuffer));
                 }
                 factory = GetBackingStore(effectiveBackingStore);
             }
@@ -445,9 +441,8 @@ namespace TextEditor
             }
 
             toolStripLabelBackingStore.Text = String.Format(
-                "[{0}, {2}, {1}]",
+                "[{0}, {1}]",
                 effectiveBackingStore,
-                textEditControl.Hardened ? "Hardened" : "Not Hardened",
                 textEditControl.TextService);
 
             base.OnShown(e);

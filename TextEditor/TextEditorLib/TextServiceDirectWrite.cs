@@ -113,8 +113,6 @@ namespace TextEditor
 
         public TextService Service { get { return TextService.DirectWrite; } }
 
-        public bool Hardened { get { return false; } }
-
         public void Reset(
             Font font,
             int visibleWidth)

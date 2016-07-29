@@ -32,7 +32,6 @@ namespace TextEditor
     public enum BackingStore
     {
         String,
-        Protected,
         Utf8SplayGapBuffer,
     }
 

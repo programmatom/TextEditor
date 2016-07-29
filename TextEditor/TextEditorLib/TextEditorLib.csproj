@@ -121,12 +121,8 @@
     <Compile Include="ITextService.cs" />
     <Compile Include="ITextStorage.cs" />
     <Compile Include="LineWidthCache.cs" />
-    <Compile Include="Marshal2.cs" />
     <Compile Include="Pinning.cs" />
     <Compile Include="Properties\AssemblyInfo.cs" />
-    <Compile Include="ProtectedStorage.cs">
-      <SubType>Component</SubType>
-    </Compile>
     <Compile Include="SkipList.cs" />
     <Compile Include="StringStorage.cs">
       <SubType>Component</SubType>

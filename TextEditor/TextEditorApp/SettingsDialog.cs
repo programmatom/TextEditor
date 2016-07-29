@@ -50,9 +50,6 @@ namespace TextEditor
                 case BackingStore.String:
                     comboBoxBackingStore.SelectedItem = "String";
                     break;
-                case BackingStore.Protected:
-                    comboBoxBackingStore.SelectedItem = "Protected";
-                    break;
                 case BackingStore.Utf8SplayGapBuffer:
                     comboBoxBackingStore.SelectedItem = "Utf8SplayGapBuffer";
                     break;
@@ -114,9 +111,6 @@ namespace TextEditor
                         throw new ArgumentException();
                     case "String":
                         config.BackingStore = BackingStore.String;
-                        break;
-                    case "Protected":
-                        config.BackingStore = BackingStore.Protected;
                         break;
                     case "Utf8SplayGapBuffer":
                         config.BackingStore = BackingStore.Utf8SplayGapBuffer;

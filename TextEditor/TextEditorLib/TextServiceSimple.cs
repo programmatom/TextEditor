@@ -46,30 +46,11 @@ namespace TextEditor
                 this.fontHeight = fontHeight;
                 this.size = size;
 
-#if WINDOWS
-                pinLine = new Pin<string>(new String((char)0, line.Length));
-                bool success = false;
-                try
-                {
-                    Marshal2.Copy(line, 0, pinLine.AddrOfPinnedObject(), line.Length);
-                    success = true;
-                }
-                finally
-                {
-                    if (!success)
-                    {
-                        Marshal2.SecureZero(pinLine.Ref, pinLine.AddrOfPinnedObject());
-                        pinLine.Dispose();
-                    }
-                }
-#else
                 pinLine = new Pin<string>(line);
-#endif
             }
 
             public void Dispose()
             {
-                Marshal2.SecureZero(pinLine.Ref, pinLine.AddrOfPinnedObject());
                 pinLine.Dispose();
             }
 
@@ -383,8 +364,6 @@ namespace TextEditor
         }
 
         public TextService Service { get { return TextService.Simple; } }
-
-        public bool Hardened { get { return true; } }
 
         public void Reset(
             Font font,

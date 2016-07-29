@@ -110,7 +110,6 @@ namespace TextEditor
             this.textEditControl = new TextEditor.TextEditControl();
             this.stringStorageFactory = new TextEditor.StringStorageFactory();
             this.helper = new TextEditor.TextEditorWindowHelper(this.components);
-            this.protectedStorageFactory = new TextEditor.ProtectedStorageFactory();
             this.utf8SplayGapBufferFactory = new TextEditor.Utf8SplayGapStorageFactory();
             this.dpiChangeHelper = new TextEditor.DpiChangeHelper(this.components);
             this.menuStrip.SuspendLayout();
@@ -854,7 +853,6 @@ namespace TextEditor
         private System.Windows.Forms.ToolStripTextBox toolStripTextBoxColumn;
         private StringStorageFactory stringStorageFactory;
         private System.Windows.Forms.ToolStripLabel toolStripLabelBackingStore;
-        private ProtectedStorageFactory protectedStorageFactory;
         private Utf8SplayGapStorageFactory utf8SplayGapBufferFactory;
         private System.Windows.Forms.ToolStripMenuItem toolsToolStripMenuItem;
         private System.Windows.Forms.ToolStripMenuItem previousUTF16SurrogatePairToolStripMenuItem;

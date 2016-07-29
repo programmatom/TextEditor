@@ -480,8 +480,7 @@ namespace TextEditor
             }
             if ((pasteToolStripMenuItem != null) && Enable)
             {
-                pasteToolStripMenuItem.Enabled = !textEditControl.ReadOnly
-                    && (Clipboard.ContainsText() || (textEditControl.Hardened && (secureClipboard != null)));
+                pasteToolStripMenuItem.Enabled = !textEditControl.ReadOnly && Clipboard.ContainsText();
             }
             if ((clearToolStripMenuItem != null) && Enable)
             {
@@ -673,23 +672,11 @@ namespace TextEditor
             }
         }
 
-        private static ITextStorage secureClipboard;
-
         private void cutToolStripMenuItem_Click(object sender, EventArgs e)
         {
             if (Enable && !textEditControl.ReadOnly)
             {
-                if (!textEditControl.Hardened)
-                {
-                    secureClipboard = null;
-                    textEditControl.Cut();
-                }
-                else
-                {
-                    Clipboard.Clear();
-                    secureClipboard = textEditControl.SelectedTextStorage;
-                    textEditControl.Clear();
-                }
+                textEditControl.Cut();
             }
         }
 
@@ -697,16 +684,7 @@ namespace TextEditor
         {
             if (Enable)
             {
-                if (!textEditControl.Hardened)
-                {
-                    secureClipboard = null;
-                    textEditControl.Copy();
-                }
-                else
-                {
-                    Clipboard.Clear();
-                    secureClipboard = textEditControl.SelectedTextStorage;
-                }
+                textEditControl.Copy();
             }
         }
 
@@ -714,17 +692,9 @@ namespace TextEditor
         {
             if (Enable && !textEditControl.ReadOnly)
             {
-                if (!textEditControl.Hardened || Clipboard.ContainsText())
+                if (Clipboard.ContainsText())
                 {
-                    secureClipboard = null;
                     textEditControl.Paste();
-                }
-                else
-                {
-                    textEditControl.ReplaceRangeAndSelect(
-                        textEditControl.Selection,
-                        secureClipboard,
-                        1);
                 }
             }
         }

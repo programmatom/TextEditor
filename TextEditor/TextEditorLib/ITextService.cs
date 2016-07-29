@@ -83,8 +83,6 @@ namespace TextEditor
     {
         TextService Service { get; }
 
-        bool Hardened { get; }
-
         void Reset(
             Font font,
             int visibleWidth);

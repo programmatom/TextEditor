@@ -202,8 +202,6 @@ namespace TextEditor
         }
 
 
-        public override bool Hardened { get { return false; } }
-
         public override bool PreservesLineEndings { get { return true; } }
 
         public override Type[] PermittedEncodings { get { return new Type[] { typeof(UTF8Encoding), typeof(ANSIEncoding), }; } }

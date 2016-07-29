@@ -412,11 +412,6 @@ namespace TextEditor
         /* helper routine to fill in a buffer of raw data. */
         private StringBuilder MakeRawBuffer(string EOLN)
         {
-            if (factory.Hardened)
-            {
-                throw new InvalidOperationException("Plaintext operation not permitted on hardened storage object");
-            }
-
             int totalNumChars = TotalNumChars(EOLN.Length);
 
             StringBuilder text = new StringBuilder(totalNumChars);
@@ -493,8 +488,6 @@ namespace TextEditor
         public abstract class TextStorageFactory : Component, ITextStorageFactory
         {
             // customization
-
-            public abstract bool Hardened { get; }
 
             public virtual bool PreservesLineEndings { get { return false; } }
 
@@ -731,10 +724,6 @@ namespace TextEditor
                 int offset,
                 int count)
             {
-                if (Hardened)
-                {
-                    throw new InvalidOperationException("Plaintext operation not permitted on hardened storage object");
-                }
                 using (IDecodedTextLine decodedLine = line.Decode_MustDispose())
                 {
                     return Encode(decodedLine.Value.Substring(offset, count));
@@ -750,10 +739,6 @@ namespace TextEditor
                 int offsetC,
                 int countC)
             {
-                if (Hardened)
-                {
-                    throw new InvalidOperationException("Plaintext operation not permitted on hardened storage object");
-                }
                 using (IDecodedTextLine decodedLineA = lineA.Decode_MustDispose())
                 {
                     using (IDecodedTextLine decodedLineB = lineB != null ? lineB.Decode_MustDispose() : null)

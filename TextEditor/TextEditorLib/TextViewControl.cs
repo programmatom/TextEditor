@@ -78,8 +78,6 @@ namespace TextEditor
         private ITextService textService = new TextServiceSimple(); // if changing, update TextService default value attribute as well
 #endif
 
-        private bool requireHardened;
-
         private Brush normalForeBrush;
         private Brush normalBackBrush;
         private Pen normalForePen;
@@ -171,20 +169,6 @@ namespace TextEditor
                 textStorage = textStorageFactory.New();
 
                 OnFontChanged(EventArgs.Empty); // ensure recalculations
-            }
-        }
-
-        [Browsable(true), Category("Behavior")]
-        public bool Hardened { get { return textStorageFactory.Hardened && textService.Hardened; } }
-
-        [Browsable(true), Category("Behavior"), DefaultValue(false)]
-        public bool RequireHardened { get { return requireHardened; } set { requireHardened = value; } }
-
-        public void ValidateHardened()
-        {
-            if (requireHardened && !Hardened && !DesignMode)
-            {
-                throw new InvalidOperationException();
             }
         }
 
@@ -391,7 +375,6 @@ namespace TextEditor
             {
                 return;
             }
-            ValidateHardened();
 
             if (AutoSize)
             {
@@ -440,7 +423,6 @@ namespace TextEditor
             {
                 return;
             }
-            ValidateHardened();
 
             using (Graphics graphics = CreateGraphics())
             {
@@ -530,7 +512,6 @@ namespace TextEditor
             {
                 return;
             }
-            ValidateHardened();
 
             int startLine = -AutoScrollPosition.Y / fontHeight;
             int endLine = (-AutoScrollPosition.Y + ClientHeight + (fontHeight - 1)) / fontHeight;
@@ -560,7 +541,6 @@ namespace TextEditor
             {
                 return;
             }
-            ValidateHardened();
 
             EnsureGraphicsObjects();
             using (Graphics graphics = CreateGraphics())
@@ -575,7 +555,6 @@ namespace TextEditor
             {
                 return;
             }
-            ValidateHardened();
 
             Rectangle rect = new Rectangle(
                 AutoScrollPosition.X,
@@ -844,7 +823,6 @@ namespace TextEditor
 
         protected IDecodedTextLine GetSpaceFromTabLineMustDispose(int index, out bool tabsFound)
         {
-            ValidateHardened();
             using (IDecodedTextLine decodedLine = textStorage[index].Decode_MustDispose())
             {
                 int length;
@@ -852,16 +830,8 @@ namespace TextEditor
 
                 using (Pin<char[]> pinChars = new Pin<char[]>(new char[length]))
                 {
-                    try
-                    {
-                        GetSpaceFromTabLine(decodedLine.Value, spacesPerTab, pinChars.Ref, length);
-                        return textStorageFactory.NewDecoded_MustDispose(pinChars.Ref, 0, length);
-                        // SECURITY: pinChars content lives on owned by IDecodedTextLine object returned here
-                    }
-                    finally
-                    {
-                        Marshal2.SecureZero(pinChars.Ref, pinChars.AddrOfPinnedObject());
-                    }
+                    GetSpaceFromTabLine(decodedLine.Value, spacesPerTab, pinChars.Ref, length);
+                    return textStorageFactory.NewDecoded_MustDispose(pinChars.Ref, 0, length);
                 }
             }
         }
@@ -869,7 +839,6 @@ namespace TextEditor
         /* find out the pixel index of the left edge of the specified character */
         public int ScreenXFromCharIndex(Graphics graphics, int lineIndex, int charIndex, bool forInsertionPoint)
         {
-            ValidateHardened();
             bool tabsFound;
             using (IDecodedTextLine decodedSpacedLine = GetSpaceFromTabLineMustDispose(lineIndex, out tabsFound))
             {
@@ -903,8 +872,6 @@ namespace TextEditor
         /* convert a pixel position into the nearest character */
         public int CharIndexFromScreenX(Graphics graphics, int lineIndex, int screenX)
         {
-            ValidateHardened();
-
             int columnIndex = 0;
 
             if ((lineIndex < 0) || (lineIndex >= textStorage.Count))
@@ -975,7 +942,6 @@ namespace TextEditor
 
         public int GetColumnFromCharIndex(int lineIndex, int charIndex)
         {
-            ValidateHardened();
             using (IDecodedTextLine decodedLine = textStorage[lineIndex].Decode_MustDispose())
             {
                 return GetColumnFromCharIndex(decodedLine, charIndex);
@@ -1005,7 +971,6 @@ namespace TextEditor
 
         public int GetCharIndexFromColumn(int lineIndex, int column)
         {
-            ValidateHardened();
             using (IDecodedTextLine decodedLine = textStorage[lineIndex].Decode_MustDispose())
             {
                 return GetCharIndexFromColumn(decodedLine, column);
@@ -1035,8 +1000,6 @@ namespace TextEditor
             ITextStorage storage)
         {
             this.textStorageFactory = factory;
-
-            ValidateHardened();
 
             this.textStorage = factory.Take(storage);
             stickyX = 0;
@@ -1352,7 +1315,6 @@ namespace TextEditor
             int endLine,
             int endCharPlusOne)
         {
-            ValidateHardened();
             SelPoint oldSelectionActive = SelectionActive;
             if ((startLine < 0) || (startChar < 0) || (endLine < 0) || (endCharPlusOne < 0))
             {
@@ -2481,7 +2443,6 @@ namespace TextEditor
                 Debug.Assert(false);
                 throw new ArgumentException();
             }
-            ValidateHardened();
 
             ITextStorage copy = textStorage.CloneSection(
                 startLine,
@@ -2529,7 +2490,6 @@ namespace TextEditor
                 Debug.Assert(false);
                 throw new ArgumentException();
             }
-            ValidateHardened();
 
             int replacedEndLine = startLine + replacement.Count - 1;
             int replacedEndCharPlusOne = replacement[replacement.Count - 1].Length;
@@ -2684,14 +2644,11 @@ namespace TextEditor
 
         public ITextLine GetLine(int index)
         {
-            ValidateHardened();
             return textStorage[index];
         }
 
         public void SetLine(int index, ITextLine value)
         {
-            ValidateHardened();
-
             int currSelectStartLine = selectStartLine;
             int currSelectStartChar = selectStartChar;
             int currSelectEndLine = selectEndLine;
@@ -2780,7 +2737,6 @@ namespace TextEditor
                 {
                     return null;
                 }
-                ValidateHardened();
                 return textStorage.GetText(lineFeed);
             }
             set
@@ -2789,7 +2745,6 @@ namespace TextEditor
                 {
                     return;
                 }
-                ValidateHardened();
                 ReplaceRangeAndSelect(
                     All,
                     value,
@@ -2825,12 +2780,10 @@ namespace TextEditor
         {
             get
             {
-                ValidateHardened();
                 return this.SelectedTextStorage.GetText(lineFeed);
             }
             set
             {
-                ValidateHardened();
                 value = !String.IsNullOrEmpty(value) ? value : String.Empty;
                 ITextStorage text = textStorageFactory.FromUtf16Buffer(value, 0, value.Length, lineFeed);
                 this.SelectedTextStorage = text;
@@ -2843,7 +2796,6 @@ namespace TextEditor
             /* get a copy of the selected area */
             get
             {
-                ValidateHardened();
                 return GetRange(
                     selectStartLine,
                     selectStartChar,
@@ -2862,7 +2814,6 @@ namespace TextEditor
                 {
                     throw new ArgumentException();
                 }
-                ValidateHardened();
 
                 ReplaceRangeAndSelect(
                     selectStartLine,
@@ -2879,7 +2830,6 @@ namespace TextEditor
         {
             get
             {
-                ValidateHardened();
                 return textStorageFactory.Copy(textStorage);
             }
             set
@@ -2892,7 +2842,6 @@ namespace TextEditor
                 {
                     throw new ArgumentException();
                 }
-                ValidateHardened();
 
                 ReplaceRangeAndSelect(
                     0,
@@ -2912,7 +2861,6 @@ namespace TextEditor
 
         public void Copy()
         {
-            ValidateHardened();
             ITextStorage copy = this.SelectedTextStorage;
             string text = copy.GetText(Environment.NewLine);
             if (!String.IsNullOrEmpty(text))
@@ -2927,7 +2875,6 @@ namespace TextEditor
 
         public void Paste()
         {
-            ValidateHardened();
             if (Clipboard.ContainsText())
             {
                 string scrap = Clipboard.GetText();
@@ -2947,8 +2894,6 @@ namespace TextEditor
 
         public void Clear()
         {
-            ValidateHardened();
-
             ReplaceRangeAndSelect(
                 selectStartLine,
                 selectStartChar,
@@ -2969,7 +2914,6 @@ namespace TextEditor
                 throw new InvalidOperationException();
             }
 
-            // TODO: security: lock and scrub these buffer and string
             char[] buffer;
             if (!deferredHighSurrogate.HasValue)
             {

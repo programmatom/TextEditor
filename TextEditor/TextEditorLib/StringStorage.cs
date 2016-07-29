@@ -170,8 +170,6 @@ namespace TextEditor
         }
 
 
-        public override bool Hardened { get { return false; } }
-
         public override TextStorage NewStorage()
         {
             return new StringStorage(this);

@@ -191,7 +191,6 @@ namespace TextEditor
 
     public interface ITextStorageFactory
     {
-        bool Hardened { get; }
         bool PreservesLineEndings { get; }
         Type[] PermittedEncodings { get; } // null == any encoding permitted
 
