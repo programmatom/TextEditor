@@ -718,7 +718,7 @@ namespace TextEditor
             }
         }
 
-        private static bool CurrentCultureEquals( // TODO: security review for allocations
+        private static bool CurrentCultureEquals(
             IDecodedTextLine decodedA,
             IDecodedTextLine decodedB,
             CompareOptions options)
@@ -726,7 +726,7 @@ namespace TextEditor
             return 0 == CultureInfo.CurrentCulture.CompareInfo.Compare(decodedA.Value, decodedB.Value, options);
         }
 
-        private static int CurrentCultureIndexOf( // TODO: security review for allocations
+        private static int CurrentCultureIndexOf(
             IDecodedTextLine decodedText,
             IDecodedTextLine decodedPattern,
             int startIndex,

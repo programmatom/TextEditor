@@ -446,13 +446,6 @@ namespace TextEditor
         // use TextWriter.NewLine to configure which newline character sequence to write
         public virtual void ToTextWriter(TextWriter writer)
         {
-#if false // TODO: later -- allow plaintext save for testing
-            if (factory.Hardened)
-            {
-                throw new InvalidOperationException("Plaintext operation not permitted on hardened storage object");
-            }
-#endif
-
             int count = GetLineCount();
             int i = 0;
             while (true)
