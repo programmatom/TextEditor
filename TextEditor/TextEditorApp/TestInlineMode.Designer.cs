@@ -54,7 +54,6 @@ namespace TextEditor
             this.label1 = new System.Windows.Forms.Label();
             this.label2 = new System.Windows.Forms.Label();
             this.textEditControl1 = new TextEditor.TextEditControl();
-            this.stringStorageFactory = new TextEditor.StringStorageFactory();
             this.label3 = new System.Windows.Forms.Label();
             this.label4 = new System.Windows.Forms.Label();
             this.textEditControl2 = new TextEditor.TextEditControl();
@@ -114,7 +113,6 @@ namespace TextEditor
             this.textEditControl1.Name = "textEditControl1";
             this.textEditControl1.Size = new System.Drawing.Size(25, 13);
             this.textEditControl1.TabIndex = 2;
-            this.textEditControl1.TextStorageFactory = this.stringStorageFactory;
             // 
             // label3
             // 
@@ -148,7 +146,6 @@ namespace TextEditor
             this.textEditControl2.Name = "textEditControl2";
             this.textEditControl2.Size = new System.Drawing.Size(25, 13);
             this.textEditControl2.TabIndex = 7;
-            this.textEditControl2.TextStorageFactory = this.stringStorageFactory;
             // 
             // label5
             // 
@@ -208,7 +205,6 @@ namespace TextEditor
         private TextEditControl textEditControl2;
         private System.Windows.Forms.Label label5;
         private System.Windows.Forms.Label label6;
-        private StringStorageFactory stringStorageFactory;
         private System.Windows.Forms.Button button1;
         private DpiChangeHelper dpiChangeHelper;
     }

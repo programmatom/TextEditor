@@ -53,16 +53,17 @@ namespace TextEditor
 
         private BackingStore effectiveBackingStore = MainClass.Config.BackingStore;
 
-        protected TextEditorWindow(bool createBackingStore)
+        protected TextEditorWindow(bool setSpecificBackingStore)
         {
             EditorConfig config = MainClass.Config[0];
 
             InitializeComponent();
             this.Icon = TextEditorApp.Properties.Resources.Icon2;
 
-            if (createBackingStore)
+            if (setSpecificBackingStore)
             {
-                this.textEditControl.TextStorageFactory = GetBackingStore(MainClass.Config.BackingStore);
+                ITextStorageFactory backingStore = GetBackingStore(MainClass.Config.BackingStore);
+                textEditControl.Reload(backingStore, backingStore.New());
             }
 
             try
@@ -103,13 +104,13 @@ namespace TextEditor
         }
 
         public TextEditorWindow()
-            : this(true/*createBackingStore*/)
+            : this(true/*setSpecificBackingStore*/)
         {
             UserEditedLineCharHandler(null, null);
         }
 
         public TextEditorWindow(string path)
-            : this(false/*createBackingStore*/)
+            : this(false/*setSpecificBackingStore*/)
         {
             LoadFile(path);
             UserEditedLineCharHandler(null, null);
@@ -302,7 +303,7 @@ namespace TextEditor
             }
             if (factory != null)
             {
-                this.textEditControl.TextStorageFactory = factory;
+                this.textEditControl.Reload(factory, factory.New());
             }
 
             if (String.IsNullOrEmpty(qualifier))
@@ -319,7 +320,8 @@ namespace TextEditor
                     {
                         MessageBox.Show("Specified encoding is not permitted by specified backing store. Falling back to 'String' backing store.", "Text Editor", MessageBoxButtons.OK, MessageBoxIcon.Information);
                         TextEditorWindow replacementWindow = new TextEditorWindow(false/*createBackingStore*/);
-                        replacementWindow.textEditControl.TextStorageFactory = replacementWindow.GetBackingStore(BackingStore.String);
+                        ITextStorageFactory stringStorageFactory = replacementWindow.GetBackingStore(BackingStore.String);
+                        replacementWindow.textEditControl.Reload(stringStorageFactory, stringStorageFactory.New());
                         replacementWindow.LoadFile(path, encodingInfo);
                         replacementWindow.Show();
                         throw new ApplicationException(); // cancel the old window

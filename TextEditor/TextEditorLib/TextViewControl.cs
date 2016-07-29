@@ -37,7 +37,7 @@ namespace TextEditor
     [DefaultBindingProperty("Text"), DefaultEvent("TextChanged")]
     public partial class TextViewControl : ScrollableControl
     {
-        private ITextStorageFactory textStorageFactory;
+        private ITextStorageFactory textStorageFactory = new Utf8SplayGapStorageFactory();
         private ITextStorage textStorage;
 
         private int currentWidth;
@@ -96,6 +96,8 @@ namespace TextEditor
         {
             InitializeComponent();
 
+            this.textStorage = textStorageFactory.New();
+
             timerCursorBlink.Interval = (int)GetCaretBlinkTime();
             timerCursorBlink.Tick += new EventHandler(timerCursorBlink_Tick);
             //timerCursorBlink.Start();
@@ -111,15 +113,6 @@ namespace TextEditor
 #else
         private static uint GetCaretBlinkTime() { return 500; } // msec
 #endif
-
-        public TextViewControl(ITextStorageFactory textStorageFactory)
-            : this()
-        {
-            this.textStorageFactory = textStorageFactory;
-            this.textStorage = textStorageFactory.New();
-
-            OnFontChanged(EventArgs.Empty); // ensure recalculations
-        }
 
         ~TextViewControl()
         {
@@ -146,31 +139,8 @@ namespace TextEditor
             DisposeThis();
         }
 
-        [Browsable(true), Category("Storage")]
-        public ITextStorageFactory TextStorageFactory
-        {
-            get
-            {
-                return textStorageFactory;
-            }
-            set
-            {
-                // a set-once property
-                if (textStorageFactory != null)
-                {
-                    throw new InvalidOperationException();
-                }
-                if (value == null)
-                {
-                    return;
-                }
-
-                textStorageFactory = value;
-                textStorage = textStorageFactory.New();
-
-                OnFontChanged(EventArgs.Empty); // ensure recalculations
-            }
-        }
+        [Browsable(false), DesignerSerializationVisibility(DesignerSerializationVisibility.Hidden)]
+        public ITextStorageFactory TextStorageFactory { get { return textStorageFactory; } }
 
         protected override void OnSizeChanged(EventArgs e)
         {
@@ -371,11 +341,6 @@ namespace TextEditor
         // recompute canvas size incrementally
         private void RecomputeCanvasSizeIncremental()
         {
-            if (textStorageFactory == null)
-            {
-                return;
-            }
-
             if (AutoSize)
             {
                 RecomputeCanvasSizeExactForAutoSize();
@@ -419,11 +384,6 @@ namespace TextEditor
         // do not call this method directly, use RecomputeCanvasSizePartial() instead
         private void RecomputeCanvasSizePartial(int startLine, int endLine, bool includeClientWidthAndOverflow)
         {
-            if (textStorageFactory == null)
-            {
-                return;
-            }
-
             using (Graphics graphics = CreateGraphics())
             {
                 // add some margin for two reasons: First, Graphics.DrawString seems to omit the last character if the bounding
@@ -504,11 +464,6 @@ namespace TextEditor
 
         private void Redraw()
         {
-            if (textStorageFactory == null)
-            {
-                return;
-            }
-
             int startLine = -AutoScrollPosition.Y / fontHeight;
             int endLine = (-AutoScrollPosition.Y + ClientHeight + (fontHeight - 1)) / fontHeight;
             RedrawRange(startLine, endLine);
@@ -533,11 +488,6 @@ namespace TextEditor
 
         private void RedrawLine(int line)
         {
-            if (textStorageFactory == null)
-            {
-                return;
-            }
-
             EnsureGraphicsObjects();
             using (Graphics graphics = CreateGraphics())
             {
@@ -547,11 +497,6 @@ namespace TextEditor
 
         private void RedrawLinePrimitive(Graphics graphics, int index)
         {
-            if (DesignMode)
-            {
-                return;
-            }
-
             Rectangle rect = new Rectangle(
                 AutoScrollPosition.X,
                 index * fontHeight + AutoScrollPosition.Y,
@@ -570,7 +515,7 @@ namespace TextEditor
 
                 graphics2.FillRectangle(normalBackBrush, rect2);
 
-                if ((index < 0) || (index >= textStorage.Count) || (textStorageFactory == null))
+                if ((index < 0) || (index >= textStorage.Count))
                 {
                     goto PutOnscreen;
                 }
@@ -961,16 +906,13 @@ namespace TextEditor
 
         public void SetStickyX()
         {
-            if (textStorage != null)
+            using (Graphics graphics = CreateGraphics())
             {
-                using (Graphics graphics = CreateGraphics())
-                {
-                    stickyX = ScreenXFromCharIndex(
-                        graphics,
-                        selectStartIsActive ? selectStartLine : selectEndLine,
-                        selectStartIsActive ? selectStartChar : selectEndCharPlusOne,
-                        true/*forInsertionPoint*/);
-                }
+                stickyX = ScreenXFromCharIndex(
+                    graphics,
+                    selectStartIsActive ? selectStartLine : selectEndLine,
+                    selectStartIsActive ? selectStartChar : selectEndCharPlusOne,
+                    true/*forInsertionPoint*/);
             }
         }
 
@@ -981,9 +923,14 @@ namespace TextEditor
             ITextStorageFactory factory,
             ITextStorage storage)
         {
-            this.textStorageFactory = factory;
+            if ((factory == null) || (storage == null))
+            {
+                throw new ArgumentNullException();
+            }
 
+            this.textStorageFactory = factory;
             this.textStorage = factory.Take(storage);
+
             stickyX = 0;
             SetInsertionPoint(0, 0);
             ResetCanvasSize();
@@ -1676,10 +1623,6 @@ namespace TextEditor
         protected override void OnMouseDown(MouseEventArgs e)
         {
             base.OnMouseDown(e);
-            if (textStorageFactory == null)
-            {
-                return;
-            }
             if (!Focused)
             {
                 Focus();
@@ -2028,10 +1971,6 @@ namespace TextEditor
 
             base.OnKeyDown(e);
             if (e.Handled)
-            {
-                return;
-            }
-            if (textStorageFactory == null)
             {
                 return;
             }
@@ -2703,18 +2642,10 @@ namespace TextEditor
         {
             get
             {
-                if (DesignMode && (textStorage == null))
-                {
-                    return null;
-                }
                 return textStorage.GetText(lineFeed);
             }
             set
             {
-                if (DesignMode && (textStorage == null))
-                {
-                    return;
-                }
                 ReplaceRangeAndSelect(
                     All,
                     value,

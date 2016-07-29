@@ -49,15 +49,6 @@ namespace TextEditor
             this.ChangeListener = undo;
         }
 
-        public TextEditControl(ITextStorageFactory textStorageFactory)
-            : base(textStorageFactory)
-        {
-            InitializeComponent();
-
-            undo = new TextUndoTracker(this, true/*clearRedo*/);
-            this.ChangeListener = undo;
-        }
-
 
         //
 

@@ -737,7 +737,6 @@ namespace TextEditor
             this.textEditControl.Name = "textEditControl";
             this.textEditControl.Size = new System.Drawing.Size(633, 395);
             this.textEditControl.TabIndex = 1;
-            this.textEditControl.TextStorageFactory = null;
             // 
             // helper
             // 
