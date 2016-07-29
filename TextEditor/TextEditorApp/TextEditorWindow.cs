@@ -738,47 +738,33 @@ namespace TextEditor
             SelPoint position = textEditControl.SelectionActive;
             ITextLine currentLine = null;
             IDecodedTextLine currentLineDecoded = null;
-            try
+            while (position < textEditControl.End)
             {
-                while (position < textEditControl.End)
+                if (currentLine == null)
                 {
-                    if (currentLine == null)
-                    {
-                        currentLine = textEditControl[position.Line];
-                        currentLineDecoded = currentLine.Decode_MustDispose();
-                    }
+                    currentLine = textEditControl[position.Line];
+                    currentLineDecoded = currentLine.Decode_MustDispose();
+                }
 
-                    if (position.Column <= currentLineDecoded.Length - 2)
+                if (position.Column <= currentLineDecoded.Length - 2)
+                {
+                    if (Char.IsHighSurrogate(currentLineDecoded[position.Column])
+                        && Char.IsLowSurrogate(currentLineDecoded[position.Column + 1]))
                     {
-                        if (Char.IsHighSurrogate(currentLineDecoded[position.Column])
-                            && Char.IsLowSurrogate(currentLineDecoded[position.Column + 1]))
-                        {
-                            textEditControl.SetSelection(
-                                position,
-                                new SelPoint(position.Line, position.Column + 2),
-                                false/*selectStartIsActive*/);
-                            return;
-                        }
-                    }
-
-                    position.Column++;
-                    if (position.Column >= currentLine.Length)
-                    {
-                        position = new SelPoint(position.Line + 1, 0);
-                        currentLine = null;
-                        if (currentLineDecoded != null)
-                        {
-                            currentLineDecoded.Dispose();
-                            currentLineDecoded = null;
-                        }
+                        textEditControl.SetSelection(
+                            position,
+                            new SelPoint(position.Line, position.Column + 2),
+                            false/*selectStartIsActive*/);
+                        return;
                     }
                 }
-            }
-            finally
-            {
-                if (currentLineDecoded != null)
+
+                position.Column++;
+                if (position.Column >= currentLine.Length)
                 {
-                    currentLineDecoded.Dispose();
+                    position = new SelPoint(position.Line + 1, 0);
+                    currentLine = null;
+                    currentLineDecoded = null;
                 }
             }
             textEditControl.ErrorBeep();
@@ -790,51 +776,37 @@ namespace TextEditor
             ITextLine currentLine = null;
             IDecodedTextLine currentLineDecoded = null;
             SelPoint zero = new SelPoint();
-            try
+            while (position > zero)
             {
-                while (position > zero)
+                if (currentLine == null)
                 {
-                    if (currentLine == null)
-                    {
-                        currentLine = textEditControl[position.Line];
-                        currentLineDecoded = currentLine.Decode_MustDispose();
-                    }
+                    currentLine = textEditControl[position.Line];
+                    currentLineDecoded = currentLine.Decode_MustDispose();
+                }
 
-                    if (position.Column >= 2)
+                if (position.Column >= 2)
+                {
+                    if (Char.IsHighSurrogate(currentLineDecoded[position.Column - 2])
+                        && Char.IsLowSurrogate(currentLineDecoded[position.Column - 1]))
                     {
-                        if (Char.IsHighSurrogate(currentLineDecoded[position.Column - 2])
-                            && Char.IsLowSurrogate(currentLineDecoded[position.Column - 1]))
-                        {
-                            textEditControl.SetSelection(
-                                new SelPoint(position.Line, position.Column - 2),
-                                position,
-                                true/*selectStartIsActive*/);
-                            return;
-                        }
-                    }
-
-                    position.Column--;
-                    if (position.Column < 0)
-                    {
-                        position = new SelPoint(position.Line - 1, 0);
-                        currentLine = null;
-                        if (currentLineDecoded != null)
-                        {
-                            currentLineDecoded.Dispose();
-                            currentLineDecoded = null;
-                        }
-                        if (position.Line >= 0)
-                        {
-                            position.Column = textEditControl[position.Line].Length;
-                        }
+                        textEditControl.SetSelection(
+                            new SelPoint(position.Line, position.Column - 2),
+                            position,
+                            true/*selectStartIsActive*/);
+                        return;
                     }
                 }
-            }
-            finally
-            {
-                if (currentLineDecoded != null)
+
+                position.Column--;
+                if (position.Column < 0)
                 {
-                    currentLineDecoded.Dispose();
+                    position = new SelPoint(position.Line - 1, 0);
+                    currentLine = null;
+                    currentLineDecoded = null;
+                    if (position.Line >= 0)
+                    {
+                        position.Column = textEditControl[position.Line].Length;
+                    }
                 }
             }
             textEditControl.ErrorBeep();

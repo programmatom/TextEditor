@@ -36,13 +36,6 @@ namespace TextEditor
                 : base(line)
             {
             }
-
-#if DEBUG
-            public override string ToString()
-            {
-                return Value;
-            }
-#endif
         }
 
         public class Utf8GapStorageLine : ITextLine
@@ -271,10 +264,8 @@ namespace TextEditor
             }
             else
             {
-                using (IDecodedTextLine decodedLine = line.Decode_MustDispose())
-                {
-                    return new Utf8GapStorageLine(Encoding.UTF8.GetBytes(decodedLine.Value));
-                }
+                IDecodedTextLine decodedLine = line.Decode_MustDispose();
+                return new Utf8GapStorageLine(Encoding.UTF8.GetBytes(decodedLine.Value));
             }
         }
     }

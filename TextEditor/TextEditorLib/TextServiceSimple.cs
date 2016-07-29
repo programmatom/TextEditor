@@ -35,23 +35,21 @@ namespace TextEditor
 
         private class TextInfoSimple : ITextInfo, IDisposable
         {
-            private readonly Pin<string> pinLine;
+            private readonly string line;
             private readonly Font font;
             private readonly int fontHeight;
             private readonly Size size;
 
             public TextInfoSimple(string line, Font font, int fontHeight, Size size)
             {
+                this.line = line;
                 this.font = font;
                 this.fontHeight = fontHeight;
                 this.size = size;
-
-                pinLine = new Pin<string>(line);
             }
 
             public void Dispose()
             {
-                pinLine.Dispose();
             }
 
 #if WINDOWS
@@ -107,7 +105,7 @@ namespace TextEditor
 #else
                         graphics, // Mono's TextRenderer reverses IDeviceContext back to Graphics, but GDI is off the table for Mono so we don't need it.
 #endif
-                        pinLine.Ref,
+                        line,
                         font,
                         position,
                         foreColor,
@@ -129,7 +127,7 @@ namespace TextEditor
             {
                 Rectangle rect;
 
-                if ((startPos == 0) && (endPosPlusOne == pinLine.Ref.Length))
+                if ((startPos == 0) && (endPosPlusOne == line.Length))
                 {
                     rect = new Rectangle(
                         position,
@@ -140,12 +138,12 @@ namespace TextEditor
                     int prefixWidth = MeasureTextPrefix(
                         graphics,
                         font,
-                        pinLine.Ref,
+                        line,
                         startPos);
                     int twoWidth = MeasureTextPrefix(
                         graphics,
                         font,
-                        pinLine.Ref,
+                        line,
                         endPosPlusOne);
                     rect = new Rectangle(
                         new Point(prefixWidth + position.X, position.Y),
@@ -233,7 +231,7 @@ namespace TextEditor
                 float indent = MeasureTextPrefix(
                     graphics,
                     font,
-                    pinLine.Ref,
+                    line,
                     offset);
                 x = (int)indent;
             }
@@ -246,12 +244,12 @@ namespace TextEditor
             {
                 int columnIndex = 0;
 
-                int limit = pinLine.Ref.Length;
+                int limit = line.Length;
                 int i = 0;
                 float length = 0;
                 while (i < limit)
                 {
-                    int length2 = MeasureTextPrefix(graphics, font, pinLine.Ref, i + 1);
+                    int length2 = MeasureTextPrefix(graphics, font, line, i + 1);
                     float center = (length + length2) / 2;
                     if (x <= length2)
                     {
@@ -283,7 +281,7 @@ namespace TextEditor
                 out int nextOffset)
             {
                 offset++;
-                if ((offset < pinLine.Ref.Length) && Char.IsLowSurrogate(pinLine.Ref[offset]))
+                if ((offset < line.Length) && Char.IsLowSurrogate(line[offset]))
                 {
                     offset++;
                 }
@@ -295,7 +293,7 @@ namespace TextEditor
                 out int prevOffset)
             {
                 offset--;
-                if (Char.IsLowSurrogate(pinLine.Ref[offset]))
+                if (Char.IsLowSurrogate(line[offset]))
                 {
                     offset--;
                 }
@@ -306,17 +304,17 @@ namespace TextEditor
                 int offset,
                 out int nextOffset)
             {
-                while ((offset < pinLine.Ref.Length) && !Char.IsLetterOrDigit(pinLine.Ref[offset]))
+                while ((offset < line.Length) && !Char.IsLetterOrDigit(line[offset]))
                 {
                     /* skipping white space between cursor & next word */
                     offset++;
                 }
-                while ((offset < pinLine.Ref.Length) && Char.IsLetterOrDigit(pinLine.Ref[offset]))
+                while ((offset < line.Length) && Char.IsLetterOrDigit(line[offset]))
                 {
                     /* skipping over the word itself */
                     offset++;
                 }
-                Debug.Assert((offset == pinLine.Ref.Length) || !Char.IsLowSurrogate(pinLine.Ref[offset]));
+                Debug.Assert((offset == line.Length) || !Char.IsLowSurrogate(line[offset]));
                 nextOffset = offset;
             }
 
@@ -324,17 +322,17 @@ namespace TextEditor
                 int offset,
                 out int prevOffset)
             {
-                while ((offset > 0) && !Char.IsLetterOrDigit(pinLine.Ref[offset - 1]))
+                while ((offset > 0) && !Char.IsLetterOrDigit(line[offset - 1]))
                 {
                     /* skipping white space between cursor & previous word */
                     offset--;
                 }
-                while ((offset > 0) && Char.IsLetterOrDigit(pinLine.Ref[offset - 1]))
+                while ((offset > 0) && Char.IsLetterOrDigit(line[offset - 1]))
                 {
                     /* skipping over the word itself */
                     offset--;
                 }
-                Debug.Assert((offset == 0) || !Char.IsLowSurrogate(pinLine.Ref[offset]));
+                Debug.Assert((offset == 0) || !Char.IsLowSurrogate(line[offset]));
                 prevOffset = offset;
             }
         }

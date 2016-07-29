@@ -44,21 +44,6 @@ namespace TextEditor
                 get { return line; }
             }
 
-            ~StringStorageDecodedLine()
-            {
-#if DEBUG
-                Debug.Assert(false, this.GetType().Name + " finalizer invoked - have you forgotten to .Dispose()? " + allocatedFrom.ToString());
-#endif
-            }
-#if DEBUG
-            private readonly StackTrace allocatedFrom = new StackTrace(true);
-#endif
-
-            public void Dispose()
-            {
-                GC.SuppressFinalize(this);
-            }
-
 #if DEBUG
             public override string ToString()
             {
@@ -209,10 +194,8 @@ namespace TextEditor
             }
             else
             {
-                using (IDecodedTextLine decodedLine = line.Decode_MustDispose())
-                {
-                    return new StringStorageLine(decodedLine.Value);
-                }
+                IDecodedTextLine decodedLine = line.Decode_MustDispose();
+                return new StringStorageLine(decodedLine.Value);
             }
         }
 

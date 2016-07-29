@@ -210,7 +210,6 @@ namespace TextEditor
             this.comboBoxBackingStore.FormattingEnabled = true;
             this.comboBoxBackingStore.Items.AddRange(new object[] {
             "String",
-            "Protected",
             "Utf8SplayGapBuffer"});
             this.comboBoxBackingStore.Location = new System.Drawing.Point(323, 3);
             this.comboBoxBackingStore.Name = "comboBoxBackingStore";

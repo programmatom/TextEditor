@@ -191,18 +191,16 @@ namespace TextEditor
 
                             string prefix = String.Empty;
 
-                            using (IDecodedTextLine decodedLine = GetLine(insertionLine).Decode_MustDispose())
+                            IDecodedTextLine decodedLine = GetLine(insertionLine).Decode_MustDispose();
+                            if (autoIndent)
                             {
-                                if (autoIndent)
+                                int prefixEndChar = 0;
+                                while ((prefixEndChar < insertionChar)
+                                    && ((decodedLine[prefixEndChar] == '\t') || (decodedLine[prefixEndChar] == ' ')))
                                 {
-                                    int prefixEndChar = 0;
-                                    while ((prefixEndChar < insertionChar)
-                                        && ((decodedLine[prefixEndChar] == '\t') || (decodedLine[prefixEndChar] == ' ')))
-                                    {
-                                        prefixEndChar++;
-                                    }
-                                    prefix = decodedLine.Value.Substring(0, prefixEndChar); // TODO: security
+                                    prefixEndChar++;
                                 }
+                                prefix = decodedLine.Value.Substring(0, prefixEndChar);
                             }
 
                             InsertLineBreak(prefix);
@@ -335,24 +333,22 @@ namespace TextEditor
                 {
                     int charIndex = 0;
                     int columnCount = 0;
-                    using (IDecodedTextLine decodedLine = text[i].Decode_MustDispose())
+                    IDecodedTextLine decodedLine = text[i].Decode_MustDispose();
+                    while ((charIndex < decodedLine.Length) && (columnCount < TabSize))
                     {
-                        while ((charIndex < decodedLine.Length) && (columnCount < TabSize))
+                        if (decodedLine[charIndex] == ' ')
                         {
-                            if (decodedLine[charIndex] == ' ')
-                            {
-                                charIndex += 1;
-                                columnCount += 1;
-                            }
-                            else if (decodedLine[charIndex] == '\t')
-                            {
-                                charIndex += 1;
-                                columnCount = TabSize; /* cause loop termination */
-                            }
-                            else
-                            {
-                                columnCount = TabSize; /* cause loop termination */
-                            }
+                            charIndex += 1;
+                            columnCount += 1;
+                        }
+                        else if (decodedLine[charIndex] == '\t')
+                        {
+                            charIndex += 1;
+                            columnCount = TabSize; /* cause loop termination */
+                        }
+                        else
+                        {
+                            columnCount = TabSize; /* cause loop termination */
                         }
                     }
 
@@ -390,30 +386,28 @@ namespace TextEditor
                 for (int i = 0; i < text.Count; i++)
                 {
                     ITextLine line = text[i];
-                    using (IDecodedTextLine decodedLine = line.Decode_MustDispose())
+                    IDecodedTextLine decodedLine = line.Decode_MustDispose();
+                    int index = decodedLine.Length;
+                    while ((index > 0) && Char.IsWhiteSpace(decodedLine[index - 1]))
                     {
-                        int index = decodedLine.Length;
-                        while ((index > 0) && Char.IsWhiteSpace(decodedLine[index - 1]))
-                        {
-                            index--;
-                        }
-                        if (index != decodedLine.Length)
-                        {
-                            ITextStorage data = TextStorageFactory.FromUtf16Buffer(
-                                decodedLine.Value,
-                                0,
-                                index,
-                                Environment.NewLine);
-                            text.DeleteSection(
-                                i,
-                                0,
-                                i,
-                                line.Length);
-                            text.InsertSection(
-                                i,
-                                0,
-                                data);
-                        }
+                        index--;
+                    }
+                    if (index != decodedLine.Length)
+                    {
+                        ITextStorage data = TextStorageFactory.FromUtf16Buffer(
+                            decodedLine.Value,
+                            0,
+                            index,
+                            Environment.NewLine);
+                        text.DeleteSection(
+                            i,
+                            0,
+                            i,
+                            line.Length);
+                        text.InsertSection(
+                            i,
+                            0,
+                            data);
                     }
                 }
             });
@@ -427,25 +421,23 @@ namespace TextEditor
                 for (int i = 0; i < text.Count; i++)
                 {
                     bool tabsFound;
-                    using (IDecodedTextLine line2 = GetSpaceFromTabLineMustDispose(i, out tabsFound))
+                    IDecodedTextLine line2 = GetSpaceFromTabLineMustDispose(i, out tabsFound);
+                    if (tabsFound)
                     {
-                        if (tabsFound)
-                        {
-                            ITextStorage data = TextStorageFactory.FromUtf16Buffer(
-                                line2.Value,
-                                0,
-                                line2.Length,
-                                Environment.NewLine);
-                            text.DeleteSection(
-                                i,
-                                0,
-                                i,
-                                GetLine(i).Length);
-                            text.InsertSection(
-                                i,
-                                0,
-                                data);
-                        }
+                        ITextStorage data = TextStorageFactory.FromUtf16Buffer(
+                            line2.Value,
+                            0,
+                            line2.Length,
+                            Environment.NewLine);
+                        text.DeleteSection(
+                            i,
+                            0,
+                            i,
+                            GetLine(i).Length);
+                        text.InsertSection(
+                            i,
+                            0,
+                            data);
                     }
                 }
             });
@@ -475,35 +467,33 @@ namespace TextEditor
                 /* just an insertion point.  In this case, if it's like this: */
                 /* (...)|  or like this:  |(...), then the group immediately */
                 /* next to the insertion point should be selected */
-                using (IDecodedTextLine decodedLine = GetLine(backLine).Decode_MustDispose())
+                IDecodedTextLine decodedLine = GetLine(backLine).Decode_MustDispose();
+                if (backChar > 0)
                 {
-                    if (backChar > 0)
+                    if ((decodedLine[backChar - 1] == ')')
+                        || (decodedLine[backChar - 1] == '}')
+                        || (decodedLine[backChar - 1] == ']'))
                     {
-                        if ((decodedLine[backChar - 1] == ')')
-                            || (decodedLine[backChar - 1] == '}')
-                            || (decodedLine[backChar - 1] == ']'))
-                        {
-                            /* move insertion point left */
-                            backChar -= 1;
-                            forwardChar -= 1;
-                            goto InitialSetupSkipOutPoint;
-                        }
+                        /* move insertion point left */
+                        backChar -= 1;
+                        forwardChar -= 1;
+                        goto InitialSetupSkipOutPoint;
                     }
-                    if (backChar < decodedLine.Length/*no -1*/)
+                }
+                if (backChar < decodedLine.Length/*no -1*/)
+                {
+                    /* notice we don't use BackChar + 1 here, because the insertion point */
+                    /* is BETWEEN two characters (the x-1 and the x character) */
+                    if ((decodedLine[backChar] == '(')
+                        || (decodedLine[backChar] == '{')
+                        || (decodedLine[backChar] == '['))
                     {
-                        /* notice we don't use BackChar + 1 here, because the insertion point */
-                        /* is BETWEEN two characters (the x-1 and the x character) */
-                        if ((decodedLine[backChar] == '(')
-                            || (decodedLine[backChar] == '{')
-                            || (decodedLine[backChar] == '['))
-                        {
-                            /* move insertion point right */
-                            backChar += 1;
-                            forwardChar += 1;
-                            goto InitialSetupSkipOutPoint;
-                            /* BackChar and ForwardChar could be equal to HeapBlockLength(GetDefaultHeap(), Line) */
-                            /* after this. */
-                        }
+                        /* move insertion point right */
+                        backChar += 1;
+                        forwardChar += 1;
+                        goto InitialSetupSkipOutPoint;
+                        /* BackChar and ForwardChar could be equal to HeapBlockLength(GetDefaultHeap(), Line) */
+                        /* after this. */
                     }
                 }
             /* jump here when the insertion point has been adjusted */
@@ -514,59 +504,57 @@ namespace TextEditor
             bool first = true;
             while (backLine >= 0)
             {
-                using (IDecodedTextLine decodedLine = GetLine(backLine).Decode_MustDispose())
+                IDecodedTextLine decodedLine = GetLine(backLine).Decode_MustDispose();
+                if (!first)
                 {
-                    if (!first)
-                    {
-                        backChar = decodedLine.Length;
-                    }
-                    first = false;
-                    while (backChar > 0)
-                    {
-                        backChar -= 1;
-                        char c = decodedLine[backChar];
-                        if ((c == ')') || (c == '}') || (c == ']'))
-                        {
-                            /* we ran into the trailing end of a grouping, so we increment */
-                            /* the count and look for the beginning end. */
-                            stack[stackIndex] = c;
-                            stackIndex += 1;
-                            if (stackIndex >= MaxStackSize)
-                            {
-                                /* expression is too complex to be analyzed */
-                                ErrorBeep();
-                                return;
-                            }
-                        }
-                        else if ((c == '(') || (c == '{') || (c == '['))
-                        {
-                            /* here we found a beginning end of some sort.  If it's the */
-                            /* beginning of a group we aren't in, then check to see that */
-                            /* it matches */
-                            if (stackIndex == 0)
-                            {
-                                /* there are no other blocks we had to go through so this */
-                                /* begin must enclose us */
-                                form = c;
-                                goto ForwardScanEntryPoint;
-                            }
-                            stackIndex -= 1;
-                            if (((c == '(') && (stack[stackIndex] == ')'))
-                                || ((c == '{') && (stack[stackIndex] == '}'))
-                                || ((c == '[') && (stack[stackIndex] == ']')))
-                            {
-                                /* good */
-                            }
-                            else
-                            {
-                                /* bad */
-                                ErrorBeep();
-                                return;
-                            }
-                        }
-                    }
-                    backLine -= 1;
+                    backChar = decodedLine.Length;
                 }
+                first = false;
+                while (backChar > 0)
+                {
+                    backChar -= 1;
+                    char c = decodedLine[backChar];
+                    if ((c == ')') || (c == '}') || (c == ']'))
+                    {
+                        /* we ran into the trailing end of a grouping, so we increment */
+                        /* the count and look for the beginning end. */
+                        stack[stackIndex] = c;
+                        stackIndex += 1;
+                        if (stackIndex >= MaxStackSize)
+                        {
+                            /* expression is too complex to be analyzed */
+                            ErrorBeep();
+                            return;
+                        }
+                    }
+                    else if ((c == '(') || (c == '{') || (c == '['))
+                    {
+                        /* here we found a beginning end of some sort.  If it's the */
+                        /* beginning of a group we aren't in, then check to see that */
+                        /* it matches */
+                        if (stackIndex == 0)
+                        {
+                            /* there are no other blocks we had to go through so this */
+                            /* begin must enclose us */
+                            form = c;
+                            goto ForwardScanEntryPoint;
+                        }
+                        stackIndex -= 1;
+                        if (((c == '(') && (stack[stackIndex] == ')'))
+                            || ((c == '{') && (stack[stackIndex] == '}'))
+                            || ((c == '[') && (stack[stackIndex] == ']')))
+                        {
+                            /* good */
+                        }
+                        else
+                        {
+                            /* bad */
+                            ErrorBeep();
+                            return;
+                        }
+                    }
+                }
+                backLine -= 1;
             }
             ErrorBeep();
             return;
@@ -574,65 +562,63 @@ namespace TextEditor
             stackIndex = 0;
             while (forwardLine < this.Count)
             {
-                using (IDecodedTextLine decodedLine = GetLine(forwardLine).Decode_MustDispose())
+                IDecodedTextLine decodedLine = GetLine(forwardLine).Decode_MustDispose();
+                while (forwardChar < decodedLine.Length)
                 {
-                    while (forwardChar < decodedLine.Length)
+                    char c = decodedLine[forwardChar];
+                    forwardChar += 1;
+                    if ((c == '(') || (c == '{') || (c == '['))
                     {
-                        char c = decodedLine[forwardChar];
-                        forwardChar += 1;
-                        if ((c == '(') || (c == '{') || (c == '['))
+                        /* we ran into the leading end of a grouping, so we increment */
+                        /* the count and look for the end end. */
+                        stack[stackIndex] = c;
+                        stackIndex += 1;
+                        if (stackIndex >= MaxStackSize)
                         {
-                            /* we ran into the leading end of a grouping, so we increment */
-                            /* the count and look for the end end. */
-                            stack[stackIndex] = c;
-                            stackIndex += 1;
-                            if (stackIndex >= MaxStackSize)
+                            /* expression is too complex to be analyzed */
+                            ErrorBeep();
+                            return;
+                        }
+                    }
+                    else if ((c == ')') || (c == '}') || (c == ']'))
+                    {
+                        /* here we found an end of some sort.  If it's the */
+                        /* end of a group we aren't in, then check to see that */
+                        /* it matches */
+                        if (stackIndex == 0)
+                        {
+                            /* there are no other blocks we had to go through so this */
+                            /* end must enclose us */
+                            if (((form == '(') && (c == ')'))
+                                || ((form == '{') && (c == '}'))
+                                || ((form == '[') && (c == ']')))
                             {
-                                /* expression is too complex to be analyzed */
+                                SetSelection(
+                                    backLine,
+                                    backChar,
+                                    forwardLine,
+                                    forwardChar,
+                                    SelectionStartIsActive);
+                                return;
+                            }
+                            else
+                            {
                                 ErrorBeep();
                                 return;
                             }
                         }
-                        else if ((c == ')') || (c == '}') || (c == ']'))
+                        stackIndex -= 1;
+                        if (((c == ')') && (stack[stackIndex] == '('))
+                            || ((c == '}') && (stack[stackIndex] == '{'))
+                            || ((c == ']') && (stack[stackIndex] == '[')))
                         {
-                            /* here we found an end of some sort.  If it's the */
-                            /* end of a group we aren't in, then check to see that */
-                            /* it matches */
-                            if (stackIndex == 0)
-                            {
-                                /* there are no other blocks we had to go through so this */
-                                /* end must enclose us */
-                                if (((form == '(') && (c == ')'))
-                                    || ((form == '{') && (c == '}'))
-                                    || ((form == '[') && (c == ']')))
-                                {
-                                    SetSelection(
-                                        backLine,
-                                        backChar,
-                                        forwardLine,
-                                        forwardChar,
-                                        SelectionStartIsActive);
-                                    return;
-                                }
-                                else
-                                {
-                                    ErrorBeep();
-                                    return;
-                                }
-                            }
-                            stackIndex -= 1;
-                            if (((c == ')') && (stack[stackIndex] == '('))
-                                || ((c == '}') && (stack[stackIndex] == '{'))
-                                || ((c == ']') && (stack[stackIndex] == '[')))
-                            {
-                                /* good */
-                            }
-                            else
-                            {
-                                /* bad */
-                                ErrorBeep();
-                                return;
-                            }
+                            /* good */
+                        }
+                        else
+                        {
+                            /* bad */
+                            ErrorBeep();
+                            return;
                         }
                     }
                 }
@@ -767,42 +753,38 @@ namespace TextEditor
             {
                 // within-line search case
 
-                using (IDecodedTextLine decodedPattern = pattern[0].Decode_MustDispose())
+                IDecodedTextLine decodedPattern = pattern[0].Decode_MustDispose();
+                IDecodedTextLine decodedStartLine = GetLine(startLine).Decode_MustDispose();
+                if (startChar + decodedPattern.Length > decodedStartLine.Length)
                 {
-                    using (IDecodedTextLine decodedStartLine = GetLine(startLine).Decode_MustDispose())
+                    return false;
+                }
+                if (startChar != CurrentCultureIndexOf(
+                    decodedStartLine,
+                    decodedPattern,
+                    startChar,
+                    decodedPattern.Length,
+                    caseSensitive
+                        ? CompareOptions.None
+                        : CompareOptions.IgnoreCase))
+                {
+                    return false;
+                }
+                if (matchWholeWord)
+                {
+                    if (Char.IsLetterOrDigit(decodedPattern[0]))
                     {
-                        if (startChar + decodedPattern.Length > decodedStartLine.Length)
+                        if ((startChar - 1 >= 0) && Char.IsLetterOrDigit(decodedStartLine[startChar - 1]))
                         {
                             return false;
                         }
-                        if (startChar != CurrentCultureIndexOf(
-                            decodedStartLine,
-                            decodedPattern,
-                            startChar,
-                            decodedPattern.Length,
-                            caseSensitive
-                                ? CompareOptions.None
-                                : CompareOptions.IgnoreCase))
+                    }
+                    if (Char.IsLetterOrDigit(decodedPattern[decodedPattern.Length - 1]))
+                    {
+                        if ((startChar + decodedPattern.Length < decodedStartLine.Length)
+                            && Char.IsLetterOrDigit(decodedStartLine[startChar + decodedPattern.Length]))
                         {
                             return false;
-                        }
-                        if (matchWholeWord)
-                        {
-                            if (Char.IsLetterOrDigit(decodedPattern[0]))
-                            {
-                                if ((startChar - 1 >= 0) && Char.IsLetterOrDigit(decodedStartLine[startChar - 1]))
-                                {
-                                    return false;
-                                }
-                            }
-                            if (Char.IsLetterOrDigit(decodedPattern[decodedPattern.Length - 1]))
-                            {
-                                if ((startChar + decodedPattern.Length < decodedStartLine.Length)
-                                    && Char.IsLetterOrDigit(decodedStartLine[startChar + decodedPattern.Length]))
-                                {
-                                    return false;
-                                }
-                            }
                         }
                     }
                 }
@@ -817,34 +799,30 @@ namespace TextEditor
                 }
 
                 // first line
-                using (IDecodedTextLine decodedPatternFirstLine = pattern[0].Decode_MustDispose())
+                IDecodedTextLine decodedPatternFirstLine = pattern[0].Decode_MustDispose();
+                IDecodedTextLine decodedStartLine = GetLine(startLine).Decode_MustDispose();
+                if (startChar + decodedPatternFirstLine.Length != decodedStartLine.Length)
                 {
-                    using (IDecodedTextLine decodedStartLine = GetLine(startLine).Decode_MustDispose())
+                    return false;
+                }
+                if (startChar != CurrentCultureIndexOf(
+                    decodedStartLine,
+                    decodedPatternFirstLine,
+                    startChar,
+                    decodedPatternFirstLine.Length,
+                    caseSensitive
+                        ? CompareOptions.None
+                        : CompareOptions.IgnoreCase))
+                {
+                    return false;
+                }
+                if (matchWholeWord)
+                {
+                    if (Char.IsLetterOrDigit(decodedPatternFirstLine[0]))
                     {
-                        if (startChar + decodedPatternFirstLine.Length != decodedStartLine.Length)
+                        if ((startChar - 1 >= 0) && Char.IsLetterOrDigit(decodedStartLine[startChar - 1]))
                         {
                             return false;
-                        }
-                        if (startChar != CurrentCultureIndexOf(
-                            decodedStartLine,
-                            decodedPatternFirstLine,
-                            startChar,
-                            decodedPatternFirstLine.Length,
-                            caseSensitive
-                                ? CompareOptions.None
-                                : CompareOptions.IgnoreCase))
-                        {
-                            return false;
-                        }
-                        if (matchWholeWord)
-                        {
-                            if (Char.IsLetterOrDigit(decodedPatternFirstLine[0]))
-                            {
-                                if ((startChar - 1 >= 0) && Char.IsLetterOrDigit(decodedStartLine[startChar - 1]))
-                                {
-                                    return false;
-                                }
-                            }
                         }
                     }
                 }
@@ -852,53 +830,45 @@ namespace TextEditor
                 // interior lines
                 for (int i = 1; i < pattern.Count - 1; i++)
                 {
-                    using (IDecodedTextLine decodedPatternLine = pattern[i].Decode_MustDispose())
+                    IDecodedTextLine decodedPatternLine = pattern[i].Decode_MustDispose();
+                    IDecodedTextLine decodedLine = GetLine(startLine + i).Decode_MustDispose();
+                    if (!CurrentCultureEquals(
+                        decodedLine,
+                        decodedPatternLine,
+                        caseSensitive
+                            ? CompareOptions.None
+                            : CompareOptions.IgnoreCase))
                     {
-                        using (IDecodedTextLine decodedLine = GetLine(startLine + i).Decode_MustDispose())
-                        {
-                            if (!CurrentCultureEquals(
-                                decodedLine,
-                                decodedPatternLine,
-                                caseSensitive
-                                    ? CompareOptions.None
-                                    : CompareOptions.IgnoreCase))
-                            {
-                                return false;
-                            }
-                        }
+                        return false;
                     }
                 }
 
                 // last line
-                using (IDecodedTextLine decodedPatternLastLine = pattern[pattern.Count - 1].Decode_MustDispose())
+                IDecodedTextLine decodedPatternLastLine = pattern[pattern.Count - 1].Decode_MustDispose();
+                IDecodedTextLine decodedLastLine = GetLine(startLine + pattern.Count - 1).Decode_MustDispose();
+                if (decodedLastLine.Length < decodedPatternLastLine.Length)
                 {
-                    using (IDecodedTextLine decodedLastLine = GetLine(startLine + pattern.Count - 1).Decode_MustDispose())
+                    return false;
+                }
+                if (0 != CurrentCultureIndexOf(
+                    decodedLastLine,
+                    decodedPatternLastLine,
+                    0,
+                    decodedPatternLastLine.Length,
+                    caseSensitive
+                        ? CompareOptions.None
+                        : CompareOptions.IgnoreCase))
+                {
+                    return false;
+                }
+                if (matchWholeWord)
+                {
+                    if (Char.IsLetterOrDigit(decodedPatternLastLine[decodedPatternLastLine.Length - 1]))
                     {
-                        if (decodedLastLine.Length < decodedPatternLastLine.Length)
+                        if ((decodedPatternLastLine.Length < decodedLastLine.Length)
+                            && Char.IsLetterOrDigit(decodedLastLine[decodedPatternLastLine.Length]))
                         {
                             return false;
-                        }
-                        if (0 != CurrentCultureIndexOf(
-                            decodedLastLine,
-                            decodedPatternLastLine,
-                            0,
-                            decodedPatternLastLine.Length,
-                            caseSensitive
-                                ? CompareOptions.None
-                                : CompareOptions.IgnoreCase))
-                        {
-                            return false;
-                        }
-                        if (matchWholeWord)
-                        {
-                            if (Char.IsLetterOrDigit(decodedPatternLastLine[decodedPatternLastLine.Length - 1]))
-                            {
-                                if ((decodedPatternLastLine.Length < decodedLastLine.Length)
-                                    && Char.IsLetterOrDigit(decodedLastLine[decodedPatternLastLine.Length]))
-                                {
-                                    return false;
-                                }
-                            }
                         }
                     }
                 }

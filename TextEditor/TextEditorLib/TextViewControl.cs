@@ -439,12 +439,10 @@ namespace TextEditor
                     if (!lineWidthCache.TryGet(i, out width))
                     {
                         bool tabsFound;
-                        using (IDecodedTextLine decodedLine = GetSpaceFromTabLineMustDispose(i, out tabsFound))
+                        IDecodedTextLine decodedLine = GetSpaceFromTabLineMustDispose(i, out tabsFound);
+                        using (ITextInfo info = textService.AnalyzeText(graphics, Font, fontHeight, decodedLine.Value))
                         {
-                            using (ITextInfo info = textService.AnalyzeText(graphics, Font, fontHeight, decodedLine.Value))
-                            {
-                                width = info.GetExtent(graphics).Width;
-                            }
+                            width = info.GetExtent(graphics).Width;
                         }
                         lineWidthCache.Set(i, width);
                     }
@@ -453,12 +451,10 @@ namespace TextEditor
 #if DEBUG
                         bool tabsFound;
                         int debugWidth;
-                        using (IDecodedTextLine decodedLine = GetSpaceFromTabLineMustDispose(i, out tabsFound))
+                        IDecodedTextLine decodedLine = GetSpaceFromTabLineMustDispose(i, out tabsFound);
+                        using (ITextInfo info = textService.AnalyzeText(graphics, Font, fontHeight, decodedLine.Value))
                         {
-                            using (ITextInfo info = textService.AnalyzeText(graphics, Font, fontHeight, decodedLine.Value))
-                            {
-                                debugWidth = info.GetExtent(graphics).Width;
-                            }
+                            debugWidth = info.GetExtent(graphics).Width;
                         }
                         if (width != debugWidth)
                         {
@@ -580,25 +576,43 @@ namespace TextEditor
                 }
 
                 bool tabsFound;
-                using (IDecodedTextLine line = GetSpaceFromTabLineMustDispose(index, out tabsFound))
+                IDecodedTextLine line = GetSpaceFromTabLineMustDispose(index, out tabsFound);
+                int rtlXAdjust = 0;
+                if (RightToLeft == RightToLeft.Yes)
                 {
-                    int rtlXAdjust = 0;
-                    if (RightToLeft == RightToLeft.Yes)
+                    using (ITextInfo info = textService.AnalyzeText(
+                        graphics2,
+                        Font,
+                        fontHeight,
+                        line.Value))
                     {
-                        using (ITextInfo info = textService.AnalyzeText(
-                            graphics2,
-                            Font,
-                            fontHeight,
-                            line.Value))
-                        {
-                            rtlXAdjust = currentWidth - info.GetExtent(graphics2).Width;
-                        }
+                        rtlXAdjust = currentWidth - info.GetExtent(graphics2).Width;
                     }
+                }
 
-                    if ((index < selectStartLine) || (index > selectEndLine) || !cursorEnabledFlag
-                        || (hideSelectionOnFocusLost && !Focused))
+                if ((index < selectStartLine) || (index > selectEndLine) || !cursorEnabledFlag
+                    || (hideSelectionOnFocusLost && !Focused))
+                {
+                    /* normal draw -- no part of the line is selected */
+                    using (ITextInfo info = textService.AnalyzeText(
+                        graphics2,
+                        Font,
+                        fontHeight,
+                        line.Value))
                     {
-                        /* normal draw -- no part of the line is selected */
+                        info.DrawText(
+                            graphics2,
+                            offscreenStrip,
+                            new Point(anchor.X + rtlXAdjust, anchor.Y),
+                            ForeColor,
+                            BackColor);
+                    }
+                }
+                else
+                {
+                    if ((selectStartLine == selectEndLine) && (selectStartChar == selectEndCharPlusOne))
+                    {
+                        /* it's just an insertion point */
                         using (ITextInfo info = textService.AnalyzeText(
                             graphics2,
                             Font,
@@ -612,134 +626,114 @@ namespace TextEditor
                                 ForeColor,
                                 BackColor);
                         }
+
+                        if (cursorDrawnFlag && Focused)
+                        {
+                            int screenX = ScreenXFromCharIndex(graphics2, index, selectStartChar, true/*forInsertionPoint*/);
+                            graphics2.DrawLine(
+                                normalForePen,
+                                new Point(screenX + anchor.X + (RightToLeft == RightToLeft.Yes ? -1 : 0), 0),
+                                new Point(screenX + anchor.X + (RightToLeft == RightToLeft.Yes ? -1 : 0), fontHeight - 1));
+                        }
                     }
                     else
                     {
-                        if ((selectStartLine == selectEndLine) && (selectStartChar == selectEndCharPlusOne))
-                        {
-                            /* it's just an insertion point */
-                            using (ITextInfo info = textService.AnalyzeText(
-                                graphics2,
-                                Font,
-                                fontHeight,
-                                line.Value))
-                            {
-                                info.DrawText(
-                                    graphics2,
-                                    offscreenStrip,
-                                    new Point(anchor.X + rtlXAdjust, anchor.Y),
-                                    ForeColor,
-                                    BackColor);
-                            }
+                        /* real live selection */
 
-                            if (cursorDrawnFlag && Focused)
-                            {
-                                int screenX = ScreenXFromCharIndex(graphics2, index, selectStartChar, true/*forInsertionPoint*/);
-                                graphics2.DrawLine(
-                                    normalForePen,
-                                    new Point(screenX + anchor.X + (RightToLeft == RightToLeft.Yes ? -1 : 0), 0),
-                                    new Point(screenX + anchor.X + (RightToLeft == RightToLeft.Yes ? -1 : 0), fontHeight - 1));
-                            }
+                        /* since SelectStart/End deals in chars, but we deal in columns */
+                        /* (i.e. tabs expanded), we have to do a conversion: */
+                        int selectStartColumn = 0;
+                        Debug.Assert(selectStartLine <= index);
+                        if (selectStartLine == index)
+                        {
+                            selectStartColumn = GetColumnFromCharIndex(selectStartLine, selectStartChar);
                         }
-                        else
+                        int selectEndColumnPlusOne = line.Length;
+                        Debug.Assert(selectEndLine >= index);
+                        if (selectEndLine == index)
                         {
-                            /* real live selection */
+                            selectEndColumnPlusOne = GetColumnFromCharIndex(selectEndLine, selectEndCharPlusOne);
+                        }
 
-                            /* since SelectStart/End deals in chars, but we deal in columns */
-                            /* (i.e. tabs expanded), we have to do a conversion: */
-                            int selectStartColumn = 0;
-                            Debug.Assert(selectStartLine <= index);
-                            if (selectStartLine == index)
-                            {
-                                selectStartColumn = GetColumnFromCharIndex(selectStartLine, selectStartChar);
-                            }
-                            int selectEndColumnPlusOne = line.Length;
-                            Debug.Assert(selectEndLine >= index);
-                            if (selectEndLine == index)
-                            {
-                                selectEndColumnPlusOne = GetColumnFromCharIndex(selectEndLine, selectEndCharPlusOne);
-                            }
-
-                            using (ITextInfo info = textService.AnalyzeText(
+                        using (ITextInfo info = textService.AnalyzeText(
+                            graphics2,
+                            Font,
+                            fontHeight,
+                            line.Value))
+                        {
+                            // draw full line of normal text
+                            graphics2.FillRectangle(
+                                normalBackBrush,
+                                rect2);
+                            info.DrawText(
                                 graphics2,
-                                Font,
-                                fontHeight,
-                                line.Value))
+                                offscreenStrip,
+                                new Point(anchor.X + rtlXAdjust, anchor.Y),
+                                ForeColor,
+                                BackColor);
+
+                            // draw highlighted region
+                            using (Region highlight = info.BuildRegion(
+                                graphics2,
+                                new Point(anchor.X + rtlXAdjust, anchor.Y),
+                                selectStartColumn,
+                                selectEndLine == index ? selectEndColumnPlusOne : line.Length))
                             {
-                                // draw full line of normal text
+                                if (((RightToLeft != RightToLeft.Yes) && (selectEndLine != index))
+                                    || ((RightToLeft == RightToLeft.Yes) && (selectStartLine != index)))
+                                {
+                                    Size extent = info.GetExtent(graphics);
+                                    Rectangle rect3 = new Rectangle(
+                                        RightToLeft != RightToLeft.Yes
+                                            ? extent.Width + anchor.X + rtlXAdjust
+                                            : anchor.X,
+                                        0,
+                                        RightToLeft != RightToLeft.Yes
+                                            ? Math.Max(AutoScrollMinSize.Width, ClientWidth)
+                                            : rtlXAdjust,
+                                        fontHeight);
+                                    highlight.Union(rect3);
+                                }
+                                graphics2.SetClip(
+                                    highlight,
+                                    CombineMode.Replace);
                                 graphics2.FillRectangle(
-                                    normalBackBrush,
+                                    Focused ? selectedBackBrush : selectedBackBrushInactive,
                                     rect2);
                                 info.DrawText(
                                     graphics2,
                                     offscreenStrip,
                                     new Point(anchor.X + rtlXAdjust, anchor.Y),
-                                    ForeColor,
-                                    BackColor);
-
-                                // draw highlighted region
-                                using (Region highlight = info.BuildRegion(
-                                    graphics2,
-                                    new Point(anchor.X + rtlXAdjust, anchor.Y),
-                                    selectStartColumn,
-                                    selectEndLine == index ? selectEndColumnPlusOne : line.Length))
-                                {
-                                    if (((RightToLeft != RightToLeft.Yes) && (selectEndLine != index))
-                                        || ((RightToLeft == RightToLeft.Yes) && (selectStartLine != index)))
-                                    {
-                                        Size extent = info.GetExtent(graphics);
-                                        Rectangle rect3 = new Rectangle(
-                                            RightToLeft != RightToLeft.Yes
-                                                ? extent.Width + anchor.X + rtlXAdjust
-                                                : anchor.X,
-                                            0,
-                                            RightToLeft != RightToLeft.Yes
-                                                ? Math.Max(AutoScrollMinSize.Width, ClientWidth)
-                                                : rtlXAdjust,
-                                            fontHeight);
-                                        highlight.Union(rect3);
-                                    }
-                                    graphics2.SetClip(
-                                        highlight,
-                                        CombineMode.Replace);
-                                    graphics2.FillRectangle(
-                                        Focused ? selectedBackBrush : selectedBackBrushInactive,
-                                        rect2);
-                                    info.DrawText(
-                                        graphics2,
-                                        offscreenStrip,
-                                        new Point(anchor.X + rtlXAdjust, anchor.Y),
-                                        Focused ? selectedForeColor : selectedForeColorInactive,
-                                        Focused ? selectedBackColor : selectedBackColorInactive);
-                                    graphics2.SetClip(
-                                        highlight,
-                                        CombineMode.Replace);
-                                }
+                                    Focused ? selectedForeColor : selectedForeColorInactive,
+                                    Focused ? selectedBackColor : selectedBackColorInactive);
+                                graphics2.SetClip(
+                                    highlight,
+                                    CombineMode.Replace);
                             }
+                        }
 
-                            // show active end
-                            graphics2.SetClip(rect2);
-                            if (cursorDrawnFlag && Focused)
+                        // show active end
+                        graphics2.SetClip(rect2);
+                        if (cursorDrawnFlag && Focused)
+                        {
+                            int activeLine, activeChar;
+                            if (selectStartIsActive)
                             {
-                                int activeLine, activeChar;
-                                if (selectStartIsActive)
-                                {
-                                    activeLine = selectStartLine;
-                                    activeChar = selectStartChar;
-                                }
-                                else
-                                {
-                                    activeLine = selectEndLine;
-                                    activeChar = selectEndCharPlusOne;
-                                }
-                                if (activeLine == index)
-                                {
-                                    int screenX = ScreenXFromCharIndex(graphics2, activeLine, activeChar, true/*forInsertionPoint*/);
-                                    graphics2.DrawLine(
-                                        normalForePen,
-                                        new Point(screenX + anchor.X + (RightToLeft == RightToLeft.Yes ? -1 : 0), 0),
-                                        new Point(screenX + anchor.X + (RightToLeft == RightToLeft.Yes ? -1 : 0), fontHeight - 1));
-                                }
+                                activeLine = selectStartLine;
+                                activeChar = selectStartChar;
+                            }
+                            else
+                            {
+                                activeLine = selectEndLine;
+                                activeChar = selectEndCharPlusOne;
+                            }
+                            if (activeLine == index)
+                            {
+                                int screenX = ScreenXFromCharIndex(graphics2, activeLine, activeChar, true/*forInsertionPoint*/);
+                                graphics2.DrawLine(
+                                    normalForePen,
+                                    new Point(screenX + anchor.X + (RightToLeft == RightToLeft.Yes ? -1 : 0), 0),
+                                    new Point(screenX + anchor.X + (RightToLeft == RightToLeft.Yes ? -1 : 0), fontHeight - 1));
                             }
                         }
                     }
@@ -823,16 +817,14 @@ namespace TextEditor
 
         protected IDecodedTextLine GetSpaceFromTabLineMustDispose(int index, out bool tabsFound)
         {
-            using (IDecodedTextLine decodedLine = textStorage[index].Decode_MustDispose())
-            {
-                int length;
-                GetSpaceFromTabLineLength(decodedLine.Value, spacesPerTab, out length, out tabsFound);
+            IDecodedTextLine decodedLine = textStorage[index].Decode_MustDispose();
+            int length;
+            GetSpaceFromTabLineLength(decodedLine.Value, spacesPerTab, out length, out tabsFound);
 
-                using (Pin<char[]> pinChars = new Pin<char[]>(new char[length]))
-                {
-                    GetSpaceFromTabLine(decodedLine.Value, spacesPerTab, pinChars.Ref, length);
-                    return textStorageFactory.NewDecoded_MustDispose(pinChars.Ref, 0, length);
-                }
+            using (Pin<char[]> pinChars = new Pin<char[]>(new char[length]))
+            {
+                GetSpaceFromTabLine(decodedLine.Value, spacesPerTab, pinChars.Ref, length);
+                return textStorageFactory.NewDecoded_MustDispose(pinChars.Ref, 0, length);
             }
         }
 
@@ -840,27 +832,25 @@ namespace TextEditor
         public int ScreenXFromCharIndex(Graphics graphics, int lineIndex, int charIndex, bool forInsertionPoint)
         {
             bool tabsFound;
-            using (IDecodedTextLine decodedSpacedLine = GetSpaceFromTabLineMustDispose(lineIndex, out tabsFound))
+            IDecodedTextLine decodedSpacedLine = GetSpaceFromTabLineMustDispose(lineIndex, out tabsFound);
+            using (ITextInfo info = textService.AnalyzeText(graphics, Font, fontHeight, decodedSpacedLine.Value))
             {
-                using (ITextInfo info = textService.AnalyzeText(graphics, Font, fontHeight, decodedSpacedLine.Value))
+                int columnIndex = GetColumnFromCharIndex(lineIndex, charIndex);
+                int indent;
+                // for cursorAdvancing, see https://msdn.microsoft.com/en-us/library/windows/desktop/dd317793%28v=vs.85%29.aspx
+                bool cursorAdvancing = false;
+                int adjust = 0;
+                if (forInsertionPoint && (columnIndex > 0))
                 {
-                    int columnIndex = GetColumnFromCharIndex(lineIndex, charIndex);
-                    int indent;
-                    // for cursorAdvancing, see https://msdn.microsoft.com/en-us/library/windows/desktop/dd317793%28v=vs.85%29.aspx
-                    bool cursorAdvancing = false;
-                    int adjust = 0;
-                    if (forInsertionPoint && (columnIndex > 0))
-                    {
-                        cursorAdvancing = this.cursorAdvancing;
-                        adjust = cursorAdvancing ? -1 : 0;
-                    }
-                    info.CharPosToX(graphics, columnIndex + adjust, cursorAdvancing/*trailing*/, out indent);
-                    if (RightToLeft == RightToLeft.Yes)
-                    {
-                        indent += currentWidth - info.GetExtent(graphics).Width;
-                    }
-                    return indent;
+                    cursorAdvancing = this.cursorAdvancing;
+                    adjust = cursorAdvancing ? -1 : 0;
                 }
+                info.CharPosToX(graphics, columnIndex + adjust, cursorAdvancing/*trailing*/, out indent);
+                if (RightToLeft == RightToLeft.Yes)
+                {
+                    indent += currentWidth - info.GetExtent(graphics).Width;
+                }
+                return indent;
             }
         }
 
@@ -879,41 +869,37 @@ namespace TextEditor
                 return 0;
             }
             bool tabsFound;
-            using (IDecodedTextLine decodedSpacedLine = GetSpaceFromTabLineMustDispose(lineIndex, out tabsFound))
+            IDecodedTextLine decodedSpacedLine = GetSpaceFromTabLineMustDispose(lineIndex, out tabsFound);
+            using (ITextInfo info = textService.AnalyzeText(graphics, Font, fontHeight, decodedSpacedLine.Value))
             {
-                using (ITextInfo info = textService.AnalyzeText(graphics, Font, fontHeight, decodedSpacedLine.Value))
+                if (RightToLeft == RightToLeft.Yes)
                 {
-                    if (RightToLeft == RightToLeft.Yes)
-                    {
-                        screenX -= currentWidth - info.GetExtent(graphics).Width;
-                    }
-                    bool trailing;
-                    info.XToCharPos(graphics, screenX, out columnIndex, out trailing);
+                    screenX -= currentWidth - info.GetExtent(graphics).Width;
                 }
-                /* now we have the column index, with tabs expanded; we have to figure */
-                /* out what the character index is, with tabs left intact */
-                using (IDecodedTextLine decodedLine = textStorage[lineIndex].Decode_MustDispose())
-                {
-                    int index = 0;
-                    int column = 0;
-                    while (column < columnIndex)
-                    {
-                        Debug.Assert(index < decodedLine.Length);
-                        int width = 1;
-                        if (decodedLine.Value[index] == '\t')
-                        {
-                            width = spacesPerTab - (column % spacesPerTab);
-                            if (!(column + width / 2 < columnIndex))
-                            {
-                                break;
-                            }
-                        }
-                        index++;
-                        column += width;
-                    }
-                    return index;
-                }
+                bool trailing;
+                info.XToCharPos(graphics, screenX, out columnIndex, out trailing);
             }
+            /* now we have the column index, with tabs expanded; we have to figure */
+            /* out what the character index is, with tabs left intact */
+            IDecodedTextLine decodedLine = textStorage[lineIndex].Decode_MustDispose();
+            int index = 0;
+            int column = 0;
+            while (column < columnIndex)
+            {
+                Debug.Assert(index < decodedLine.Length);
+                int width = 1;
+                if (decodedLine.Value[index] == '\t')
+                {
+                    width = spacesPerTab - (column % spacesPerTab);
+                    if (!(column + width / 2 < columnIndex))
+                    {
+                        break;
+                    }
+                }
+                index++;
+                column += width;
+            }
+            return index;
         }
 
         /* given a character index, calculate where the corresponding position is */
@@ -942,10 +928,8 @@ namespace TextEditor
 
         public int GetColumnFromCharIndex(int lineIndex, int charIndex)
         {
-            using (IDecodedTextLine decodedLine = textStorage[lineIndex].Decode_MustDispose())
-            {
-                return GetColumnFromCharIndex(decodedLine, charIndex);
-            }
+            IDecodedTextLine decodedLine = textStorage[lineIndex].Decode_MustDispose();
+            return GetColumnFromCharIndex(decodedLine, charIndex);
         }
 
         private int GetCharIndexFromColumn(IDecodedTextLine decodedLine, int column)
@@ -971,10 +955,8 @@ namespace TextEditor
 
         public int GetCharIndexFromColumn(int lineIndex, int column)
         {
-            using (IDecodedTextLine decodedLine = textStorage[lineIndex].Decode_MustDispose())
-            {
-                return GetCharIndexFromColumn(decodedLine, column);
-            }
+            IDecodedTextLine decodedLine = textStorage[lineIndex].Decode_MustDispose();
+            return GetCharIndexFromColumn(decodedLine, column);
         }
 
         public void SetStickyX()
@@ -1299,12 +1281,10 @@ namespace TextEditor
             ITextLine text = textStorage[line];
             if (column < text.Length)
             {
-                using (IDecodedTextLine decodedText = text.Decode_MustDispose())
+                IDecodedTextLine decodedText = text.Decode_MustDispose();
+                if (Char.IsLowSurrogate(decodedText[column]))
                 {
-                    if (Char.IsLowSurrogate(decodedText[column]))
-                    {
-                        column = Math.Max(0, column + (right ? 1 : -1));
-                    }
+                    column = Math.Max(0, column + (right ? 1 : -1));
                 }
             }
         }
@@ -1916,30 +1896,26 @@ namespace TextEditor
             {
                 if (startValid && (start.Line >= 0) && (start.Line < textStorage.Count))
                 {
-                    using (IDecodedTextLine decodedLine = textStorage[start.Line].Decode_MustDispose())
+                    IDecodedTextLine decodedLine = textStorage[start.Line].Decode_MustDispose();
+                    using (ITextInfo info = !simpleNavigation
+                        ? textService.AnalyzeText(graphics, Font, fontHeight, decodedLine.Value)
+                        : new TextServiceSimple().AnalyzeText(graphics, Font, fontHeight, decodedLine.Value))
                     {
-                        using (ITextInfo info = !simpleNavigation
-                            ? textService.AnalyzeText(graphics, Font, fontHeight, decodedLine.Value)
-                            : new TextServiceSimple().AnalyzeText(graphics, Font, fontHeight, decodedLine.Value))
-                        {
-                            int previous;
-                            info.PreviousWordBoundary(start.Column, out previous);
-                            start.Column = previous;
-                        }
+                        int previous;
+                        info.PreviousWordBoundary(start.Column, out previous);
+                        start.Column = previous;
                     }
                 }
                 if (endValid && (end.Line >= 0) && (end.Line < textStorage.Count))
                 {
-                    using (IDecodedTextLine decodedLine = textStorage[end.Line].Decode_MustDispose())
+                    IDecodedTextLine decodedLine = textStorage[end.Line].Decode_MustDispose();
+                    using (ITextInfo info = !simpleNavigation
+                        ? textService.AnalyzeText(graphics, Font, fontHeight, decodedLine.Value)
+                        : new TextServiceSimple().AnalyzeText(graphics, Font, fontHeight, decodedLine.Value))
                     {
-                        using (ITextInfo info = !simpleNavigation
-                            ? textService.AnalyzeText(graphics, Font, fontHeight, decodedLine.Value)
-                            : new TextServiceSimple().AnalyzeText(graphics, Font, fontHeight, decodedLine.Value))
-                        {
-                            int next;
-                            info.NextWordBoundary(end.Column, out next);
-                            end.Column = next;
-                        }
+                        int next;
+                        info.NextWordBoundary(end.Column, out next);
+                        end.Column = next;
                     }
                 }
             }
@@ -2087,46 +2063,44 @@ namespace TextEditor
                         {
                             int lineIndex = selectStartIsActive ? selectStartLine : selectEndLine;
                             int index = selectStartIsActive ? selectStartChar : selectEndCharPlusOne;
-                            using (IDecodedTextLine decodedLine = textStorage[lineIndex].Decode_MustDispose())
+                            IDecodedTextLine decodedLine = textStorage[lineIndex].Decode_MustDispose();
+                            if (!SelectionNonEmpty || extend)
                             {
-                                if (!SelectionNonEmpty || extend)
+                                if (index > 0)
                                 {
-                                    if (index > 0)
+                                    if (code == Keys.Home)
                                     {
-                                        if (code == Keys.Home)
+                                        index = 0;
+                                    }
+                                    else if ((e.KeyData & Keys.Control) != 0)
+                                    {
+                                        using (ITextInfo info = !simpleNavigation
+                                            ? textService.AnalyzeText(graphics, Font, fontHeight, decodedLine.Value)
+                                            : new TextServiceSimple().AnalyzeText(graphics, Font, fontHeight, decodedLine.Value))
                                         {
-                                            index = 0;
-                                        }
-                                        else if ((e.KeyData & Keys.Control) != 0)
-                                        {
-                                            using (ITextInfo info = !simpleNavigation
-                                                ? textService.AnalyzeText(graphics, Font, fontHeight, decodedLine.Value)
-                                                : new TextServiceSimple().AnalyzeText(graphics, Font, fontHeight, decodedLine.Value))
-                                            {
-                                                int previous;
-                                                info.PreviousWordBoundary(index, out previous);
-                                                index = previous;
-                                            }
-                                        }
-                                        else
-                                        {
-                                            using (ITextInfo info = !simpleNavigation
-                                                ? textService.AnalyzeText(graphics, Font, fontHeight, decodedLine.Value)
-                                                : new TextServiceSimple().AnalyzeText(graphics, Font, fontHeight, decodedLine.Value))
-                                            {
-                                                int previous;
-                                                info.PreviousCharBoundary(index, out previous);
-                                                index = previous;
-                                            }
+                                            int previous;
+                                            info.PreviousWordBoundary(index, out previous);
+                                            index = previous;
                                         }
                                     }
                                     else
                                     {
-                                        if (lineIndex > 0)
+                                        using (ITextInfo info = !simpleNavigation
+                                            ? textService.AnalyzeText(graphics, Font, fontHeight, decodedLine.Value)
+                                            : new TextServiceSimple().AnalyzeText(graphics, Font, fontHeight, decodedLine.Value))
                                         {
-                                            lineIndex -= 1;
-                                            index = textStorage[lineIndex].Length;
+                                            int previous;
+                                            info.PreviousCharBoundary(index, out previous);
+                                            index = previous;
                                         }
+                                    }
+                                }
+                                else
+                                {
+                                    if (lineIndex > 0)
+                                    {
+                                        lineIndex -= 1;
+                                        index = textStorage[lineIndex].Length;
                                     }
                                 }
                             }
@@ -2157,46 +2131,44 @@ namespace TextEditor
                         {
                             int lineIndex = selectStartIsActive ? selectStartLine : selectEndLine;
                             int index = selectStartIsActive ? selectStartChar : selectEndCharPlusOne;
-                            using (IDecodedTextLine decodedLine = textStorage[lineIndex].Decode_MustDispose())
+                            IDecodedTextLine decodedLine = textStorage[lineIndex].Decode_MustDispose();
+                            if (!SelectionNonEmpty || extend)
                             {
-                                if (!SelectionNonEmpty || extend)
+                                if (index < decodedLine.Length)
                                 {
-                                    if (index < decodedLine.Length)
+                                    if (code == Keys.End)
                                     {
-                                        if (code == Keys.End)
+                                        index = decodedLine.Length;
+                                    }
+                                    else if ((e.KeyData & Keys.Control) != 0)
+                                    {
+                                        using (ITextInfo info = !simpleNavigation
+                                            ? textService.AnalyzeText(graphics, Font, fontHeight, decodedLine.Value)
+                                            : new TextServiceSimple().AnalyzeText(graphics, Font, fontHeight, decodedLine.Value))
                                         {
-                                            index = decodedLine.Length;
-                                        }
-                                        else if ((e.KeyData & Keys.Control) != 0)
-                                        {
-                                            using (ITextInfo info = !simpleNavigation
-                                                ? textService.AnalyzeText(graphics, Font, fontHeight, decodedLine.Value)
-                                                : new TextServiceSimple().AnalyzeText(graphics, Font, fontHeight, decodedLine.Value))
-                                            {
-                                                int next;
-                                                info.NextWordBoundary(index, out next);
-                                                index = next;
-                                            }
-                                        }
-                                        else
-                                        {
-                                            using (ITextInfo info = !simpleNavigation
-                                                ? textService.AnalyzeText(graphics, Font, fontHeight, decodedLine.Value)
-                                                : new TextServiceSimple().AnalyzeText(graphics, Font, fontHeight, decodedLine.Value))
-                                            {
-                                                int next;
-                                                info.NextCharBoundary(index, out next);
-                                                index = next;
-                                            }
+                                            int next;
+                                            info.NextWordBoundary(index, out next);
+                                            index = next;
                                         }
                                     }
                                     else
                                     {
-                                        if (lineIndex < textStorage.Count - 1)
+                                        using (ITextInfo info = !simpleNavigation
+                                            ? textService.AnalyzeText(graphics, Font, fontHeight, decodedLine.Value)
+                                            : new TextServiceSimple().AnalyzeText(graphics, Font, fontHeight, decodedLine.Value))
                                         {
-                                            lineIndex += 1;
-                                            index = 0;
+                                            int next;
+                                            info.NextCharBoundary(index, out next);
+                                            index = next;
                                         }
+                                    }
+                                }
+                                else
+                                {
+                                    if (lineIndex < textStorage.Count - 1)
+                                    {
+                                        lineIndex += 1;
+                                        index = 0;
                                     }
                                 }
                             }
@@ -2660,58 +2632,56 @@ namespace TextEditor
             bool end = (selectEndLine == index);
             bool endEnd = end && (selectEndCharPlusOne == textStorage[index].Length);
 
-            using (IDecodedTextLine decodedValue = (value != null)
+            IDecodedTextLine decodedValue = (value != null)
                 ? value.Decode_MustDispose()
-                : textStorageFactory.NewDecoded_MustDispose(null, 0, 0))
+                : textStorageFactory.NewDecoded_MustDispose(null, 0, 0);
+            ITextStorage line = textStorageFactory.FromUtf16Buffer(
+                decodedValue.Value,
+                0,
+                decodedValue.Length,
+                lineFeed);
+
+            ReplaceRangeAndSelect(
+                index,
+                0,
+                index,
+                textStorage[index].Length,
+                line,
+                null);
+
+            bool set = false;
+            if (start || end)
             {
-                ITextStorage line = textStorageFactory.FromUtf16Buffer(
-                    decodedValue.Value,
-                    0,
-                    decodedValue.Length,
-                    lineFeed);
-
-                ReplaceRangeAndSelect(
-                    index,
-                    0,
-                    index,
-                    textStorage[index].Length,
-                    line,
-                    null);
-
-                bool set = false;
-                if (start || end)
+                if (startEnd)
                 {
-                    if (startEnd)
-                    {
-                        currSelectStartChar = textStorage[index].Length;
-                        set = true;
-                    }
-                    if (endEnd)
-                    {
-                        currSelectEndCharPlusOne = textStorage[index].Length;
-                        set = true;
-                    }
-                    if (start)
-                    {
-                        currSelectStartChar = Math.Min(currSelectStartChar, textStorage[index].Length);
-                        set = true;
-                    }
-                    if (end)
-                    {
-                        currSelectEndCharPlusOne = Math.Min(currSelectEndCharPlusOne, textStorage[index].Length);
-                        set = true;
-                    }
+                    currSelectStartChar = textStorage[index].Length;
+                    set = true;
                 }
-
-                if (set)
+                if (endEnd)
                 {
-                    SetSelection(
-                        currSelectStartLine,
-                        currSelectStartChar,
-                        currSelectEndLine,
-                        currSelectEndCharPlusOne,
-                        currSelectStartIsActive);
+                    currSelectEndCharPlusOne = textStorage[index].Length;
+                    set = true;
                 }
+                if (start)
+                {
+                    currSelectStartChar = Math.Min(currSelectStartChar, textStorage[index].Length);
+                    set = true;
+                }
+                if (end)
+                {
+                    currSelectEndCharPlusOne = Math.Min(currSelectEndCharPlusOne, textStorage[index].Length);
+                    set = true;
+                }
+            }
+
+            if (set)
+            {
+                SetSelection(
+                    currSelectStartLine,
+                    currSelectStartChar,
+                    currSelectEndLine,
+                    currSelectEndCharPlusOne,
+                    currSelectStartIsActive);
             }
         }
 

@@ -1,5 +1,6 @@
 # application compilation intermediate files
 
+/TextEditor/*.VC.opendb
 /TextEditor/.vs/*
 /TextEditor/ipch
 /TextEditor/TextEditor.VC.db

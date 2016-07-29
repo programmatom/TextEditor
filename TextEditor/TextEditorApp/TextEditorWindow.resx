@@ -129,9 +129,6 @@
   <metadata name="helper.TrayLocation" type="System.Drawing.Point, System.Drawing, Version=4.0.0.0, Culture=neutral, PublicKeyToken=b03f5f7f11d50a3a">
     <value>437, 17</value>
   </metadata>
-  <metadata name="protectedStorageFactory.TrayLocation" type="System.Drawing.Point, System.Drawing, Version=4.0.0.0, Culture=neutral, PublicKeyToken=b03f5f7f11d50a3a">
-    <value>670, 15</value>
-  </metadata>
   <metadata name="utf8SplayGapBufferFactory.TrayLocation" type="System.Drawing.Point, System.Drawing, Version=4.0.0.0, Culture=neutral, PublicKeyToken=b03f5f7f11d50a3a">
     <value>13, 10</value>
   </metadata>

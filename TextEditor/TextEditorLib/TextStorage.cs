@@ -420,10 +420,8 @@ namespace TextEditor
             int i = 0;
             while (true)
             {
-                using (IDecodedTextLine decodedLine = GetLine(i).Decode_MustDispose())
-                {
-                    text.Append(decodedLine.Value);
-                }
+                IDecodedTextLine decodedLine = GetLine(i).Decode_MustDispose();
+                text.Append(decodedLine.Value);
                 if (i == count - 1)
                 {
                     break;
@@ -459,10 +457,8 @@ namespace TextEditor
             int i = 0;
             while (true)
             {
-                using (IDecodedTextLine decodedLine = GetLine(i).Decode_MustDispose())
-                {
-                    writer.Write(decodedLine.Value);
-                }
+                IDecodedTextLine decodedLine = GetLine(i).Decode_MustDispose();
+                writer.Write(decodedLine.Value);
                 if (i == count - 1)
                 {
                     break;
@@ -724,10 +720,8 @@ namespace TextEditor
                 int offset,
                 int count)
             {
-                using (IDecodedTextLine decodedLine = line.Decode_MustDispose())
-                {
-                    return Encode(decodedLine.Value.Substring(offset, count));
-                }
+                IDecodedTextLine decodedLine = line.Decode_MustDispose();
+                return Encode(decodedLine.Value.Substring(offset, count));
             }
 
             public virtual ITextLine Combine(
@@ -739,20 +733,14 @@ namespace TextEditor
                 int offsetC,
                 int countC)
             {
-                using (IDecodedTextLine decodedLineA = lineA.Decode_MustDispose())
-                {
-                    using (IDecodedTextLine decodedLineB = lineB != null ? lineB.Decode_MustDispose() : null)
-                    {
-                        using (IDecodedTextLine decodedLineC = lineC.Decode_MustDispose())
-                        {
-                            return Encode(
-                                String.Concat(
-                                    decodedLineA.Value.Substring(offsetA, countA),
-                                    decodedLineB != null ? decodedLineB.Value : String.Empty,
-                                    decodedLineC.Value.Substring(offsetC, countC)));
-                        }
-                    }
-                }
+                IDecodedTextLine decodedLineA = lineA.Decode_MustDispose();
+                IDecodedTextLine decodedLineB = lineB != null ? lineB.Decode_MustDispose() : null;
+                IDecodedTextLine decodedLineC = lineC.Decode_MustDispose();
+                return Encode(
+                    String.Concat(
+                        decodedLineA.Value.Substring(offsetA, countA),
+                        decodedLineB != null ? decodedLineB.Value : String.Empty,
+                        decodedLineC.Value.Substring(offsetC, countC)));
             }
         }
     }

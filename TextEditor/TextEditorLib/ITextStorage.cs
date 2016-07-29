@@ -127,7 +127,7 @@ namespace TextEditor
 #endif
     }
 
-    public interface IDecodedTextLine : IDisposable
+    public interface IDecodedTextLine
     {
         int Length { get; }
         char this[int index] { get; }
