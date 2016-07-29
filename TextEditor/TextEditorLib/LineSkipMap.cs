@@ -28,46 +28,46 @@ using TreeLib;
 
 namespace TextEditor
 {
-    public class SkipList
+    public class LineSkipMap
     {
 #if DEBUG
-        public const int SkipListSparseness = 5;
+        public const int Sparseness = 5;
 #else
-        public const int SkipListSparseness = 4096;
+        public const int Sparseness = 4096;
 #endif
         // index 0 is reserved for prefix placeholder, so all lines are offset by +1
-        private readonly SplayTreeRange2List skipList = new SplayTreeRange2List();
+        private readonly SplayTreeRange2List map = new SplayTreeRange2List();
 
         public void Reset(int prefixLength, int suffixLength)
         {
-            skipList.Clear();
-            skipList.Insert(0, Side.X, 1, prefixLength);
-            skipList.Insert(1, Side.X, 1, suffixLength);
+            map.Clear();
+            map.Insert(0, Side.X, 1, prefixLength);
+            map.Insert(1, Side.X, 1, suffixLength);
         }
 
         public void GetCountYExtent(int line, out int numLines, out int charIndex, out int charLength)
         {
             line++;
-            skipList.Get(line, Side.X, out charIndex, out numLines, out charLength);
+            map.Get(line, Side.X, out charIndex, out numLines, out charLength);
         }
 
         public bool Next(int line, out int nextLine)
         {
             line++;
-            bool result = skipList.NearestGreater(line, Side.X, out nextLine);
+            bool result = map.NearestGreater(line, Side.X, out nextLine);
             nextLine--;
             return result;
         }
 
-        public int LineCount { get { return skipList.GetExtent(Side.X) - 1; } }
+        public int LineCount { get { return map.GetExtent(Side.X) - 1; } }
 
-        public int CharCount { get { return skipList.GetExtent(Side.Y); } }
+        public int CharCount { get { return map.GetExtent(Side.Y); } }
 
         public void NearestLessOrEqualCountYExtent(int line, out int startLine, out int numLines, out int charIndex, out int charCount)
         {
             line++;
-            skipList.NearestLessOrEqual(line, Side.X, out startLine);
-            skipList.Get(startLine, Side.X, out charIndex, out numLines, out charCount);
+            map.NearestLessOrEqual(line, Side.X, out startLine);
+            map.Get(startLine, Side.X, out charIndex, out numLines, out charCount);
             startLine--;
         }
 
@@ -75,10 +75,10 @@ namespace TextEditor
         {
             line++;
             int startLine, numLines, charIndex, charLength;
-            skipList.NearestLessOrEqual(line, Side.X, out startLine);
-            skipList.Get(startLine, Side.X, out charIndex, out numLines, out charLength);
-            skipList.Delete(startLine, Side.X);
-            skipList.Insert(startLine, Side.X, numLines, charLength + charDelta);
+            map.NearestLessOrEqual(line, Side.X, out startLine);
+            map.Get(startLine, Side.X, out charIndex, out numLines, out charLength);
+            map.Delete(startLine, Side.X);
+            map.Insert(startLine, Side.X, numLines, charLength + charDelta);
         }
 
         public void BulkLinesInserted(int startLine, int numLines, int charOffset, int charLength)
@@ -87,22 +87,22 @@ namespace TextEditor
 
 #if DEBUG
             int previousStartLine, previousNumLines, previousCharOffset, previousCharLength;
-            skipList.NearestLessOrEqual(startLine, Side.X, out previousStartLine);
-            skipList.Get(previousStartLine, Side.X, out previousCharOffset, out previousNumLines, out previousCharLength);
+            map.NearestLessOrEqual(startLine, Side.X, out previousStartLine);
+            map.Get(previousStartLine, Side.X, out previousCharOffset, out previousNumLines, out previousCharLength);
             if (previousStartLine != startLine)
             {
                 // this general case should never happen in our scenario
 #if false
-                skipList.Remove(previousStartLine, previousNumLines);
-                skipList.Insert(previousStartLine, startLine - previousStartLine, charOffset - previousCharOffset);
-                skipList.Insert(startLine, previousNumLines - (startLine - previousStartLine), previousCharLength - (charOffset - previousCharOffset));
+                map.Remove(previousStartLine, previousNumLines);
+                map.Insert(previousStartLine, startLine - previousStartLine, charOffset - previousCharOffset);
+                map.Insert(startLine, previousNumLines - (startLine - previousStartLine), previousCharLength - (charOffset - previousCharOffset));
 #else
                 Debug.Assert(false);
 #endif
             }
 #endif
 
-            skipList.Insert(startLine, Side.X, numLines, charLength);
+            map.Insert(startLine, Side.X, numLines, charLength);
         }
 
         public delegate int GetOffsetOfLineMethod(int line);
@@ -112,14 +112,14 @@ namespace TextEditor
             Debug.Assert(charsAdded != 0);
             lineEndOf++;
             int startLine, numLines, charIndex, charLength;
-            skipList.NearestLessOrEqual(lineEndOf, Side.X, out startLine);
-            skipList.Get(startLine, Side.X, out charIndex, out numLines, out charLength);
-            skipList.Delete(startLine, Side.X);
+            map.NearestLessOrEqual(lineEndOf, Side.X, out startLine);
+            map.Get(startLine, Side.X, out charIndex, out numLines, out charLength);
+            map.Delete(startLine, Side.X);
             numLines++;
             charLength += charsAdded;
-            skipList.Insert(startLine, Side.X, numLines, charLength);
+            map.Insert(startLine, Side.X, numLines, charLength);
 
-            if (numLines > SkipListSparseness)
+            if (numLines > Sparseness)
             {
                 int midpointLine = startLine + numLines / 2;
                 midpointLine--;
@@ -127,9 +127,9 @@ namespace TextEditor
                 midpointLine++;
                 int firstHalfCharCount = midpointIndex - charIndex;
 
-                skipList.Delete(startLine, Side.X);
-                skipList.Insert(startLine, Side.X, midpointLine - startLine, firstHalfCharCount);
-                skipList.Insert(midpointLine, Side.X, startLine + numLines - midpointLine, charLength - firstHalfCharCount);
+                map.Delete(startLine, Side.X);
+                map.Insert(startLine, Side.X, midpointLine - startLine, firstHalfCharCount);
+                map.Insert(midpointLine, Side.X, startLine + numLines - midpointLine, charLength - firstHalfCharCount);
             }
         }
 
@@ -138,24 +138,24 @@ namespace TextEditor
             Debug.Assert(charsAdded < 0);
             lineEndOf++;
             int startLine, numLines, charIndex, charLength;
-            skipList.NearestLessOrEqual(lineEndOf, Side.X, out startLine);
-            skipList.Get(startLine, Side.X, out charIndex, out numLines, out charLength);
-            skipList.Delete(startLine, Side.X);
+            map.NearestLessOrEqual(lineEndOf, Side.X, out startLine);
+            map.Get(startLine, Side.X, out charIndex, out numLines, out charLength);
+            map.Delete(startLine, Side.X);
             numLines--;
             charLength += charsAdded;
             Debug.Assert((numLines == 0) == (charLength == 0));
             if (numLines != 0)
             {
-                skipList.Insert(startLine, Side.X, numLines, charLength);
+                map.Insert(startLine, Side.X, numLines, charLength);
 
                 int nextStartLine;
-                if ((numLines <= SkipListSparseness / 2) && skipList.NearestGreater(startLine, Side.X, out nextStartLine))
+                if ((numLines <= Sparseness / 2) && map.NearestGreater(startLine, Side.X, out nextStartLine))
                 {
                     int nextNumLines, nextCharIndex, nextCharLength;
-                    skipList.Get(nextStartLine, Side.X, out nextCharIndex, out nextNumLines, out nextCharLength);
-                    skipList.Delete(nextStartLine, Side.X);
-                    skipList.Delete(startLine, Side.X);
-                    skipList.Insert(startLine, Side.X, numLines + nextNumLines, charLength + nextCharLength);
+                    map.Get(nextStartLine, Side.X, out nextCharIndex, out nextNumLines, out nextCharLength);
+                    map.Delete(nextStartLine, Side.X);
+                    map.Delete(startLine, Side.X);
+                    map.Insert(startLine, Side.X, numLines + nextNumLines, charLength + nextCharLength);
                 }
             }
         }

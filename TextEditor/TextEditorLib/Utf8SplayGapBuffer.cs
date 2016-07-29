@@ -63,7 +63,7 @@ namespace TextEditor
 
         private byte[] defaultLineEnding = WindowsLF; // TODO: code for changing default line ending
         private HugeList<byte> vector = new HugeList<byte>(typeof(SplayTreeRangeMap<>), BlockSize);
-        private SkipList skipList = new SkipList();
+        private LineSkipMap lineSkipMap = new LineSkipMap();
 
         private int totalLines;
         private int currentLine;
@@ -95,7 +95,7 @@ namespace TextEditor
             currentLine = 0;
             currentOffset = 2;
 
-            skipList.Reset(prefixLength, suffixLength);
+            lineSkipMap.Reset(prefixLength, suffixLength);
 
             if (EnableValidate)
             {
@@ -154,9 +154,9 @@ namespace TextEditor
             do
             {
                 int numLines, charOffset, charLength;
-                skipList.GetCountYExtent(startLine, out numLines, out charOffset, out charLength);
+                lineSkipMap.GetCountYExtent(startLine, out numLines, out charOffset, out charLength);
                 sb.AppendFormat("  skip: line={0}..{1} ({2}) char={3}..{4} ({5})" + Environment.NewLine, startLine, startLine + numLines - 1, numLines, charOffset, charOffset + charLength - 1, charLength);
-            } while (skipList.Next(startLine, out startLine));
+            } while (lineSkipMap.Next(startLine, out startLine));
             Debugger.Log(0, null, sb.ToString());
         }
 #endif
@@ -194,15 +194,15 @@ namespace TextEditor
             Debug.Assert((currentLine >= 0) && (currentLine <= totalLines));
             Debug.Assert(currentOffset == lineOffsets[currentLine]);
 
-            Debug.Assert(skipList.LineCount == totalLines);
-            Debug.Assert(skipList.CharCount == vector.Count);
+            Debug.Assert(lineSkipMap.LineCount == totalLines);
+            Debug.Assert(lineSkipMap.CharCount == vector.Count);
             int startLine = 0;
             do
             {
                 int numLines, charOffset, charLength;
-                skipList.GetCountYExtent(startLine, out numLines, out charOffset, out charLength);
+                lineSkipMap.GetCountYExtent(startLine, out numLines, out charOffset, out charLength);
                 Debug.Assert(lineOffsets[startLine] == charOffset);
-            } while (skipList.Next(startLine, out startLine));
+            } while (lineSkipMap.Next(startLine, out startLine));
         }
 
         public override void MoveTo(int targetLine)
@@ -221,11 +221,11 @@ namespace TextEditor
                 }
             }
 
-            Debug.Assert(skipList.LineCount == totalLines);
-            Debug.Assert(skipList.CharCount == vector.Count);
+            Debug.Assert(lineSkipMap.LineCount == totalLines);
+            Debug.Assert(lineSkipMap.CharCount == vector.Count);
 
             int startLine, numLines, charOffset, charLength;
-            skipList.NearestLessOrEqualCountYExtent(targetLine, out startLine, out numLines, out charOffset, out charLength);
+            lineSkipMap.NearestLessOrEqualCountYExtent(targetLine, out startLine, out numLines, out charOffset, out charLength);
             if (Math.Abs(startLine - targetLine) < Math.Abs(currentLine - targetLine))
             {
                 currentLine = startLine;
@@ -382,7 +382,7 @@ namespace TextEditor
             GetCurrentLineExtent(currentOffset, out lineBodyLength, out lineEndingLength);
             vector.ReplaceRange(currentOffset, lineBodyLength, buffer);
 
-            skipList.LineLengthChanged(currentLine, buffer.Length - lineBodyLength);
+            lineSkipMap.LineLengthChanged(currentLine, buffer.Length - lineBodyLength);
 
             if (EnableValidate)
             {
@@ -413,12 +413,12 @@ namespace TextEditor
             int precedingLineBreakStart = FindStartOfLineBreak(currentOffset - 1);
             int precedingLineBreakLength = currentOffset - precedingLineBreakStart;
             vector.ReplaceRange(precedingLineBreakStart, precedingLineBreakLength, defaultLineEnding);
-            skipList.LineLengthChanged(currentLine - 1, defaultLineEnding.Length - precedingLineBreakLength);
+            lineSkipMap.LineLengthChanged(currentLine - 1, defaultLineEnding.Length - precedingLineBreakLength);
             currentOffset = currentOffset - precedingLineBreakLength + defaultLineEnding.Length;
 
             vector.InsertRange(currentOffset, buffer);
             vector.InsertRange(currentOffset + buffer.Length, WindowsLF);
-            skipList.LineInserted(
+            lineSkipMap.LineInserted(
                 currentLine,
                 buffer.Length + WindowsLF.Length,
                 delegate (int line)
@@ -446,13 +446,13 @@ namespace TextEditor
             GetCurrentLineExtent(currentOffset, out lineBodyLength, out lineEndingLength);
 
             vector.RemoveRange(currentOffset, lineBodyLength + lineEndingLength);
-            skipList.LineRemoved(currentLine, -(lineBodyLength + lineEndingLength));
+            lineSkipMap.LineRemoved(currentLine, -(lineBodyLength + lineEndingLength));
 
             int precedingLineBreakStart = FindStartOfLineBreak(currentOffset - 1);
             int precedingLineBreakLength = currentOffset - precedingLineBreakStart;
             Debug.Assert(precedingLineBreakStart >= prefixLength);
             vector.ReplaceRange(precedingLineBreakStart, precedingLineBreakLength, WindowsLF);
-            skipList.LineLengthChanged(currentLine - 1, WindowsLF.Length - precedingLineBreakLength);
+            lineSkipMap.LineLengthChanged(currentLine - 1, WindowsLF.Length - precedingLineBreakLength);
             currentOffset += WindowsLF.Length - precedingLineBreakLength;
 
             totalLines--;
@@ -503,7 +503,7 @@ namespace TextEditor
             currentLine = 0;
             currentOffset = prefixLength;
 
-            skipList.Reset(prefixLength, suffixLength);
+            lineSkipMap.Reset(prefixLength, suffixLength);
 
             bool ignoreEncoding = (encoding == null) || (encoding is UTF8Encoding);
 
@@ -565,9 +565,9 @@ namespace TextEditor
 
                 currentSkipNumLines++;
                 currentSkipCharLength += nextStart - currentOffset;
-                if (currentSkipNumLines > SkipList.SkipListSparseness)
+                if (currentSkipNumLines > LineSkipMap.Sparseness)
                 {
-                    skipList.BulkLinesInserted(currentSkipStartLine, currentSkipNumLines, currentSkipCharOffset, currentSkipCharLength);
+                    lineSkipMap.BulkLinesInserted(currentSkipStartLine, currentSkipNumLines, currentSkipCharOffset, currentSkipCharLength);
                     currentSkipStartLine += currentSkipNumLines;
                     currentSkipNumLines = 0;
                     currentSkipCharOffset += currentSkipCharLength;
@@ -580,7 +580,7 @@ namespace TextEditor
             }
             if (currentSkipNumLines != 0)
             {
-                skipList.BulkLinesInserted(currentSkipStartLine, currentSkipNumLines, currentSkipCharOffset, currentSkipCharLength);
+                lineSkipMap.BulkLinesInserted(currentSkipStartLine, currentSkipNumLines, currentSkipCharOffset, currentSkipCharLength);
             }
 
             if (lineEndingCount == totalLines)
@@ -591,8 +591,8 @@ namespace TextEditor
             else
             {
                 // last line was unterminated - back it out
-                skipList.LineRemoved(currentLine, -suffixLength);
-                skipList.LineLengthChanged(currentLine, suffixLength);
+                lineSkipMap.LineRemoved(currentLine, -suffixLength);
+                lineSkipMap.LineLengthChanged(currentLine, suffixLength);
 
                 currentOffset += suffixLength;
             }
