@@ -3,6 +3,7 @@
 /TextEditor/*.VC.opendb
 /TextEditor/.vs/*
 /TextEditor/ipch
+/TextEditor/packages
 /TextEditor/TextEditor.VC.db
 /TextEditor/TextEditorApp/bin
 /TextEditor/TextEditorApp/obj

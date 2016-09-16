@@ -79,14 +79,17 @@
     <Reference Include="System" />
     <Reference Include="System.Drawing" />
     <Reference Include="System.Windows.Forms" />
-    <Reference Include="TreeLib">
-      <HintPath>..\..\..\TreeLib\TreeLib\TreeLib\bin\$(Configuration)\TreeLib.dll</HintPath>
+    <Reference Include="TreeLib, Version=1.1.0.0, Culture=neutral, processorArchitecture=MSIL">
+      <HintPath>..\packages\TreeLib.1.1.0\lib\TreeLib.dll</HintPath>
+      <Private>True</Private>
     </Reference>
-    <Reference Include="TreeLibInterface">
-      <HintPath>..\..\..\TreeLib\TreeLib\TreeLibInterface\bin\$(Configuration)\TreeLibInterface.dll</HintPath>
+    <Reference Include="TreeLibInterface, Version=1.1.0.0, Culture=neutral, processorArchitecture=MSIL">
+      <HintPath>..\packages\TreeLibInterface.1.1.0\lib\TreeLibInterface.dll</HintPath>
+      <Private>True</Private>
     </Reference>
-    <Reference Include="TreeLibUtil">
-      <HintPath>..\..\..\TreeLib\TreeLib\TreeLibUtil\bin\$(Configuration)\TreeLibUtil.dll</HintPath>
+    <Reference Include="TreeLibUtil, Version=1.1.0.0, Culture=neutral, processorArchitecture=MSIL">
+      <HintPath>..\packages\TreeLibUtil.1.1.0\lib\TreeLibUtil.dll</HintPath>
+      <Private>True</Private>
     </Reference>
   </ItemGroup>
   <ItemGroup>
@@ -175,6 +178,7 @@
     </ProjectReference>
   </ItemGroup>
   <ItemGroup>
+    <None Include="packages.config" />
     <None Include="TextEditor.FindInFilesEntry.datasource" />
   </ItemGroup>
   <Import Project="$(MSBuildBinPath)\Microsoft.CSharp.targets" />
