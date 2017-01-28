@@ -177,6 +177,20 @@ namespace TextEditor
                 {
                     try
                     {
+                        if (!File.Exists(arg))
+                        {
+                            if (DialogResult.OK == MessageBox.Show(String.Format("File \"{0}\" does not exist. Create?", arg), String.Empty, MessageBoxButtons.OKCancel))
+                            {
+                                using (File.Create(arg))
+                                {
+                                }
+                            }
+                            else
+                            {
+                                continue;
+                            }
+                        }
+
                         TextEditorWindow window = new TextEditorWindow(arg);
                         window.Show();
                     }
